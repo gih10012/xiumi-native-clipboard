@@ -73,16 +73,18 @@ function countDocument(document) {
 }
 async function devtoolsPage(port, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
+  let lastTargets = [];
   while (Date.now() < deadline) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/json/list`);
       const targets = await response.json();
-      const page = targets.find(target => target.type === "page" && target.url.startsWith("http://127.0.0.1:"));
+      lastTargets = targets;
+      const page = targets.find(target => target.type === "page");
       if (page) return page;
     } catch (_) {}
     await delay(100);
   }
-  fail("Chrome DevTools endpoint did not become ready");
+  fail(`Chrome DevTools page target did not become ready; targets=${JSON.stringify(lastTargets)}`);
 }
 function connectCDP(webSocketDebuggerUrl) {
   const socket = new WebSocket(webSocketDebuggerUrl);
@@ -122,23 +124,39 @@ const server = spawn("python3", [cli, "serve", documentPath], { cwd: root, stdio
 let chrome;
 let profile;
 let cdp;
+let chromeStderr = "";
 try {
   const url = await onceLine(server.stdout);
   if (!url.startsWith("http://127.0.0.1:")) fail(`unexpected preview URL: ${url}`);
   const port = await freePort();
   profile = await mkdtemp(path.join(os.tmpdir(), "xiumi-browser-"));
+  const headed = process.env.BROWSER_SMOKE_HEADED === "1";
   chrome = spawn(findChrome(), [
-    "--headless=new",
+    headed ? "--ozone-platform=x11" : "--headless=new",
     "--no-sandbox",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--disable-extensions",
     "--disable-gpu",
+    "--window-position=-2000,-2000",
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${profile}`,
     url,
   ], { stdio: ["ignore", "ignore", "pipe"] });
-  const page = await devtoolsPage(port);
+  chrome.stderr.setEncoding("utf8");
+  chrome.stderr.on("data", chunk => { chromeStderr = (chromeStderr + chunk).slice(-8000); });
+  let page;
+  try {
+    page = await devtoolsPage(port);
+  } catch (error) {
+    fail(`${error.message}\nChrome stderr:\n${chromeStderr}`);
+  }
   cdp = connectCDP(page.webSocketDebuggerUrl);
   await cdp.ready;
   await cdp.send("Runtime.enable");
+  await cdp.send("Page.enable");
+  await cdp.send("Page.navigate", { url });
+  await delay(300);
   await cdp.send("Page.bringToFront");
   await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true });
   const expectedJSON = JSON.stringify(expected);
@@ -148,7 +166,7 @@ try {
     returnByValue: true,
     expression: `(async()=>{
       const expected=${expectedJSON};
-      for(let i=0;i<600 && document.getElementById("sliceCount").textContent!==String(expected.slices);i++) await new Promise(r=>setTimeout(r,50));
+      for(let i=0;i<600 && (!document.getElementById("sliceCount")||document.getElementById("sliceCount").textContent!==String(expected.slices));i++) await new Promise(r=>setTimeout(r,50));
       const images=[...document.querySelectorAll("#paper img")];
       await Promise.all(images.map(image=>image.complete?Promise.resolve():new Promise(resolve=>{image.addEventListener("load",resolve,{once:true});image.addEventListener("error",resolve,{once:true});})));
       window.__copyProbe=null;
