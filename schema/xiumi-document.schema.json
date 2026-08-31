@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gih10012.github.io/xiumi-native-clipboard/schema/xiumi-document.schema.json",
+  "title": "Xiumi Native Clipboard Document",
+  "type": "object",
+  "required": ["format", "formatVersion", "meta", "clipboard"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "format": {"const": "xiumi-native-clipboard"},
+    "formatVersion": {"const": 1},
+    "meta": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1},
+        "previewWidth": {"type": "integer", "minimum": 280, "maximum": 1200},
+        "createdAt": {"type": "string"},
+        "generator": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "clipboard": {
+      "type": "object",
+      "required": ["formats"],
+      "properties": {
+        "refreshLabelTimestamp": {"type": "boolean"},
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["mime", "encoding", "data"],
+            "properties": {
+              "mime": {"type": "string", "minLength": 1},
+              "encoding": {"const": "json"},
+              "data": {"type": ["object", "array"]}
+            },
+            "additionalProperties": false
+          },
+          "contains": {
+            "type": "object",
+            "properties": {"mime": {"const": "application/xiumi-comps; category=paper.comp"}},
+            "required": ["mime"]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

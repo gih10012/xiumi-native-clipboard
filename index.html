@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>秀米原生剪切板</title>
+  <style>
+    :root{--ink:#24322a;--muted:#6e786f;--paper:#fffdf8;--line:#e7dfd1;--red:#e55c49;--green:#3f5b45;--yellow:#f4c655;--blue:#72c8df;--shadow:0 18px 55px rgba(47,53,45,.12)}
+    *{box-sizing:border-box}html{min-height:100%;background:#f5f1e8}body{min-height:100vh;margin:0;color:var(--ink);font:15px/1.65 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 8% 3%,rgba(244,198,85,.22),transparent 24rem),radial-gradient(circle at 95% 10%,rgba(114,200,223,.2),transparent 28rem),#f5f1e8}
+    button,input{font:inherit}.shell{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:34px 0 60px}.masthead{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}.brand{display:flex;gap:14px;align-items:center}.mark{display:grid;place-items:center;width:52px;height:52px;border-radius:17px;background:var(--green);color:#fff;font-size:25px;font-weight:900;box-shadow:0 9px 0 rgba(63,91,69,.14)}h1{margin:0;font-size:clamp(24px,3vw,38px);line-height:1.2;letter-spacing:-.03em}.subtitle{margin:5px 0 0;color:var(--muted)}.tag{padding:7px 12px;border:1px solid rgba(63,91,69,.2);border-radius:999px;background:rgba(255,255,255,.55);color:var(--green);font-weight:750;white-space:nowrap}
+    .workspace{display:grid;grid-template-columns:minmax(290px,350px) minmax(0,1fr);gap:22px;align-items:start}.panel{border:1px solid rgba(87,79,61,.13);border-radius:24px;background:rgba(255,253,248,.92);box-shadow:var(--shadow);overflow:hidden}.controls{position:sticky;top:18px;padding:20px}.eyebrow{margin:0 0 5px;color:var(--red);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.controls h2{margin:0 0 15px;font-size:21px}.drop{display:grid;place-items:center;min-height:142px;padding:18px;border:2px dashed #d8cdb9;border-radius:18px;background:#fffaf0;text-align:center;cursor:pointer;transition:.18s ease}.drop:hover,.drop.drag{border-color:var(--red);background:#fff5e4;transform:translateY(-1px)}.drop strong{display:block;font-size:16px}.drop span{display:block;margin-top:5px;color:var(--muted);font-size:13px}.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}.btn{min-height:44px;border:0;border-radius:13px;padding:9px 12px;font-weight:850;cursor:pointer;transition:.16s ease}.btn:hover:not(:disabled){transform:translateY(-1px)}.btn:disabled{cursor:not-allowed;opacity:.42}.btn-primary{grid-column:1/-1;background:var(--red);color:white;box-shadow:0 7px 0 rgba(176,58,43,.17)}.btn-soft{background:#edf3e7;color:var(--green)}.btn-line{border:1px solid var(--line);background:white;color:var(--ink)}
+    .status{margin-top:15px;padding:13px 14px;border-radius:14px;background:#f2efe7;color:var(--muted);font-size:13px;white-space:pre-wrap;word-break:break-word}.status.good{background:#eaf3e3;color:#35573b}.status.bad{background:#fff0ed;color:#a43e31}.facts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}.fact{padding:11px;border:1px solid var(--line);border-radius:13px;background:white}.fact b{display:block;font-size:18px;color:var(--green)}.fact span{color:var(--muted);font-size:12px}.hint{margin:15px 2px 0;color:var(--muted);font-size:13px}.hint kbd{display:inline-block;border:1px solid #d2c7b6;border-bottom-width:3px;border-radius:6px;background:#fff;padding:0 6px;color:var(--ink);font:12px/22px inherit}
+    .preview-panel{min-height:680px;background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(247,243,234,.9))}.preview-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.7)}.document-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850}.scale-note{color:var(--muted);font-size:12px;white-space:nowrap}.stage{display:flex;justify-content:center;padding:28px 18px 52px;overflow:auto}.paper{width:415px;max-width:100%;min-height:560px;background:white;box-shadow:0 7px 28px rgba(37,42,36,.12);overflow:visible}.paper.empty{display:grid;place-items:center;padding:40px;color:#9b978e;text-align:center}.paper.empty:before{content:"选择一个 .xiumi.json\A这里会出现真实排版预览";white-space:pre-line}.xiumi-slice,.xiumi-comp,.xiumi-cell{box-sizing:border-box}.xiumi-comp img{display:inline-block;vertical-align:middle}.xiumi-text p{margin:0}.unsupported{outline:2px dashed rgba(229,92,73,.5);outline-offset:-2px}.toast{position:fixed;left:50%;bottom:28px;z-index:99;transform:translate(-50%,18px);padding:11px 18px;border-radius:999px;background:#26372c;color:#fff;font-weight:800;opacity:0;pointer-events:none;transition:.2s ease;box-shadow:0 12px 32px rgba(0,0,0,.22)}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:820px){.shell{width:min(100% - 20px,620px);padding-top:20px}.masthead{align-items:center}.tag{display:none}.workspace{grid-template-columns:1fr}.controls{position:static}.preview-panel{min-height:520px}.stage{padding:18px 8px 36px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div class="brand"><div class="mark">秀</div><div><h1>秀米原生剪切板</h1><p class="subtitle">载入整体 JSON，预览后原生复制，不再折腾 HTML 导入。</p></div></div>
+      <div class="tag">Chromium · Xiumi Native</div>
+    </header>
+    <section class="workspace">
+      <aside class="panel controls">
+        <p class="eyebrow">STEP 01</p><h2>载入稿件</h2>
+        <label class="drop" id="dropZone"><div><strong>选择或拖入 JSON 文件</strong><span>.xiumi.json · 图片已内嵌</span></div><input id="fileInput" type="file" accept=".json,.xiumi.json,application/json"></label>
+        <div class="actions">
+          <button class="btn btn-soft" id="demoButton" type="button">打开演示</button>
+          <button class="btn btn-line" id="clearButton" type="button">清空</button>
+          <button class="btn btn-primary" id="copyButton" type="button" disabled>复制到秀米</button>
+        </div>
+        <div class="status" id="status">等待载入 JSON。</div>
+        <div class="facts" id="facts" hidden>
+          <div class="fact"><b id="sliceCount">0</b><span>原生片段</span></div>
+          <div class="fact"><b id="imageCount">0</b><span>内嵌图片</span></div>
+          <div class="fact"><b id="componentCount">0</b><span>可编辑组件</span></div>
+          <div class="fact"><b id="formatCount">0</b><span>剪切板格式</span></div>
+        </div>
+        <p class="hint">载入后点击按钮，或在本页按 <kbd>Ctrl</kbd> + <kbd>C</kbd>；看到成功提示后，到秀米按 <kbd>Ctrl</kbd> + <kbd>V</kbd>。</p>
+      </aside>
+      <section class="panel preview-panel">
+        <div class="preview-head"><div class="document-title" id="documentTitle">尚未载入稿件</div><div class="scale-note">415px 秀米画布</div></div>
+        <div class="stage"><article class="paper empty" id="paper" aria-live="polite"></article></div>
+      </section>
+    </section>
+  </main>
+  <div class="toast" id="toast"></div>
+  <script>
+  (() => {
+    "use strict";
+    const COMPS_MIME = "application/xiumi-comps; category=paper.comp";
+    const LABEL_MIME = "application/xiumi-label; origin=studio";
+    const MAX_BYTES = 80 * 1024 * 1024;
+    const state = { document: null, warnings: [], stats: null };
+    const $ = id => document.getElementById(id);
+    const nodes = { file: $("fileInput"), drop: $("dropZone"), demo: $("demoButton"), clear: $("clearButton"), copy: $("copyButton"), status: $("status"), facts: $("facts"), paper: $("paper"), title: $("documentTitle"), toast: $("toast") };
+
+    function setStatus(message, kind = "") { nodes.status.textContent = message; nodes.status.className = `status ${kind}`.trim(); }
+    function toast(message) { nodes.toast.textContent = message; nodes.toast.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => nodes.toast.classList.remove("show"), 2400); }
+    function clone(value) { return JSON.parse(JSON.stringify(value)); }
+    function nowValue(value, now) {
+      if (value === "$now") return now;
+      if (Array.isArray(value)) return value.map(item => nowValue(item, now));
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, nowValue(item, now)]));
+      return value;
+    }
+    function applyStyle(element, style) {
+      if (!style || typeof style !== "object") return;
+      for (const [key, value] of Object.entries(style)) {
+        if (value === null || value === undefined || value === "") continue;
+        try { element.style[key] = typeof value === "number" ? String(value) : value; } catch (_) {}
+      }
+    }
+    function safeHTML(markup) {
+      const template = document.createElement("template");
+      template.innerHTML = String(markup || "");
+      template.content.querySelectorAll("script,iframe,object,embed,link,meta,base,form,input,button").forEach(node => node.remove());
+      template.content.querySelectorAll("*").forEach(node => {
+        for (const attr of [...node.attributes]) {
+          const name = attr.name.toLowerCase();
+          const value = attr.value.trim().toLowerCase();
+          if (name.startsWith("on") || ((name === "href" || name === "src") && value.startsWith("javascript:"))) node.removeAttribute(attr.name);
+        }
+      });
+      return template.innerHTML;
+    }
+    function orderedCells(component) { return Object.keys(component).filter(key => /^col\d+$/.test(key)).sort((a,b) => Number(a.slice(3)) - Number(b.slice(3))); }
+    function renderCell(cell) {
+      const element = document.createElement("div");
+      element.className = "xiumi-cell";
+      applyStyle(element, cell && cell.style);
+      for (const item of (cell && Array.isArray(cell.items) ? cell.items : [])) element.append(renderComponent(item));
+      return element;
+    }
+    function renderComponent(component) {
+      if (!component || typeof component !== "object") return document.createTextNode("");
+      const tpl = component._comp && component._comp.tplId || "";
+      if (tpl === "paper-cp:header/1-txt-normal" || component.txt1) {
+        const element = document.createElement("section");
+        element.className = "xiumi-comp xiumi-text";
+        applyStyle(element, component._comp && component._comp.style);
+        if (component.txt1) { applyStyle(element, component.txt1.style); element.innerHTML = safeHTML(component.txt1.text); }
+        return element;
+      }
+      if (tpl === "paper-cp:image/img-autowidth" || component.img1) {
+        const element = document.createElement("section");
+        element.className = "xiumi-comp xiumi-image";
+        applyStyle(element, component._comp && component._comp.style);
+        const image = document.createElement("img");
+        image.alt = "";
+        image.src = component.img1 && component.img1.src || "";
+        applyStyle(image, component.img1 && component.img1.style);
+        element.append(image);
+        return element;
+      }
+      const element = document.createElement("section");
+      element.className = "xiumi-comp";
+      applyStyle(element, component._comp && component._comp.style);
+      const cells = orderedCells(component);
+      if (!cells.length) {
+        element.classList.add("unsupported");
+        state.warnings.push(`无法预览的组件：${tpl || "unknown"}`);
+        return element;
+      }
+      if (!["paper-cp:layout/wrapper-flex", "paper-cp:layout/row1-r1c1", "paper-cp:layout/row1-r1c2", "paper-cp:layout/fixed"].includes(tpl)) {
+        element.classList.add("unsupported");
+        state.warnings.push(`使用通用方式预览：${tpl || "unknown"}`);
+      }
+      if (tpl === "paper-cp:layout/fixed") element.style.position = "relative";
+      for (const name of cells) element.append(renderCell(component[name]));
+      return element;
+    }
+    function walk(value, visitor) {
+      if (Array.isArray(value)) value.forEach(item => walk(item, visitor));
+      else if (value && typeof value === "object") { visitor(value); Object.values(value).forEach(item => walk(item, visitor)); }
+    }
+    function validate(value) {
+      const errors = [];
+      if (!value || typeof value !== "object" || Array.isArray(value)) errors.push("JSON 根节点必须是对象");
+      if (value && value.format !== "xiumi-native-clipboard") errors.push("format 必须为 xiumi-native-clipboard");
+      if (value && value.formatVersion !== 1) errors.push("仅支持 formatVersion 1");
+      if (!value || !value.meta || typeof value.meta.title !== "string" || !value.meta.title.trim()) errors.push("缺少 meta.title");
+      const formats = value && value.clipboard && value.clipboard.formats;
+      if (!Array.isArray(formats) || !formats.length) errors.push("缺少 clipboard.formats");
+      const mimes = new Set();
+      let comps = null;
+      for (const entry of Array.isArray(formats) ? formats : []) {
+        if (!entry || typeof entry.mime !== "string" || entry.encoding !== "json") { errors.push("剪切板格式项无效"); continue; }
+        if (mimes.has(entry.mime)) errors.push(`重复 MIME：${entry.mime}`);
+        mimes.add(entry.mime);
+        if (entry.mime === COMPS_MIME) comps = entry.data;
+      }
+      if (!comps || !Array.isArray(comps.slices) || !comps.slices.length) errors.push("缺少秀米原生 slices");
+      const uuids = new Set(); let componentCount = 0, imageCount = 0;
+      if (comps) walk(comps.slices, node => {
+        if (node._comp) { componentCount++; const id = node._comp._$uuid; if (!id) errors.push("组件缺少 UUID"); else if (uuids.has(id)) errors.push(`组件 UUID 重复：${id}`); else uuids.add(id); }
+        if (node.type === "image") { imageCount++; if (typeof node.src !== "string" || !node.src.startsWith("data:") || !node.src.includes(";base64,")) errors.push(`图片 ${imageCount} 未以内嵌 Base64 保存`); }
+      });
+      if (errors.length) throw new Error([...new Set(errors)].join("\n"));
+      return { formats, comps, componentCount, imageCount };
+    }
+    async function loadValue(value, sourceLabel) {
+      try {
+        const checked = validate(value);
+        state.document = value; state.warnings = [];
+        nodes.paper.replaceChildren(); nodes.paper.classList.remove("empty");
+        const width = Number(value.meta.previewWidth) || 415;
+        nodes.paper.style.width = `${Math.max(280, Math.min(1200, width))}px`;
+        for (const slice of checked.comps.slices) { const shell = document.createElement("section"); shell.className = "xiumi-slice"; shell.append(renderComponent(slice)); nodes.paper.append(shell); }
+        nodes.title.textContent = value.meta.title;
+        $("sliceCount").textContent = checked.comps.slices.length;
+        $("imageCount").textContent = checked.imageCount;
+        $("componentCount").textContent = checked.componentCount;
+        $("formatCount").textContent = checked.formats.length;
+        nodes.facts.hidden = false; nodes.copy.disabled = false;
+        state.stats = checked;
+        const note = state.warnings.length ? `\n${[...new Set(state.warnings)].join("\n")}` : "";
+        setStatus(`已载入：${sourceLabel}\n${checked.comps.slices.length} 个片段，${checked.imageCount} 张图片。${note}`, "good");
+      } catch (error) { clearDocument(false); setStatus(error.message || String(error), "bad"); }
+    }
+    async function loadURL(url) {
+      setStatus(`正在载入：${url}`);
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`载入失败：HTTP ${response.status}`);
+      const length = Number(response.headers.get("content-length")) || 0;
+      if (length > MAX_BYTES) throw new Error("JSON 超过 80MB 限制");
+      const text = await response.text(); if (text.length > MAX_BYTES) throw new Error("JSON 超过 80MB 限制");
+      await loadValue(JSON.parse(text), url);
+    }
+    async function loadFile(file) {
+      if (!file) return;
+      if (file.size > MAX_BYTES) return setStatus("JSON 超过 80MB 限制", "bad");
+      try { await loadValue(JSON.parse(await file.text()), file.name); } catch (error) { clearDocument(false); setStatus(`无法读取 JSON：${error.message}`, "bad"); }
+    }
+    function clearDocument(showMessage = true) {
+      state.document = null; state.stats = null; state.warnings = [];
+      nodes.paper.replaceChildren(); nodes.paper.className = "paper empty"; nodes.paper.removeAttribute("style");
+      nodes.title.textContent = "尚未载入稿件"; nodes.copy.disabled = true; nodes.facts.hidden = true; nodes.file.value = "";
+      if (showMessage) setStatus("已清空，等待载入 JSON。");
+    }
+    function materializedFormats() {
+      const now = String(Date.now());
+      return state.document.clipboard.formats.map(entry => {
+        const data = nowValue(clone(entry.data), now);
+        if (state.document.clipboard.refreshLabelTimestamp !== false && entry.mime === LABEL_MIME && data && typeof data === "object") data.timestamp = now;
+        return { mime: entry.mime, value: JSON.stringify(data) };
+      });
+    }
+    function onCopy(event) {
+      if (!state.document || !event.clipboardData) return;
+      try {
+        for (const format of materializedFormats()) event.clipboardData.setData(format.mime, format.value);
+        event.clipboardData.setData("text/plain", state.document.meta.title || "Xiumi document");
+        event.preventDefault();
+        setStatus(`已写入 Chromium 原生剪切板。\n现在去秀米按 Ctrl+V。`, "good"); toast("复制成功，去秀米粘贴");
+      } catch (error) { setStatus(`复制失败：${error.message}`, "bad"); }
+    }
+    nodes.file.addEventListener("change", () => loadFile(nodes.file.files[0]));
+    nodes.drop.addEventListener("dragover", event => { event.preventDefault(); nodes.drop.classList.add("drag"); });
+    nodes.drop.addEventListener("dragleave", () => nodes.drop.classList.remove("drag"));
+    nodes.drop.addEventListener("drop", event => { event.preventDefault(); nodes.drop.classList.remove("drag"); loadFile(event.dataTransfer.files[0]); });
+    nodes.demo.addEventListener("click", () => loadURL("examples/demo.xiumi.json").catch(error => setStatus(error.message, "bad")));
+    nodes.clear.addEventListener("click", () => clearDocument());
+    nodes.copy.addEventListener("click", () => { if (!document.execCommand("copy")) setStatus("浏览器未执行复制，请在本页按 Ctrl+C。", "bad"); });
+    document.addEventListener("copy", onCopy);
+    const source = new URLSearchParams(location.search).get("src");
+    if (source) loadURL(source).catch(error => setStatus(`自动载入失败：${error.message}`, "bad"));
+  })();
+  </script>
+</body>
+</html>

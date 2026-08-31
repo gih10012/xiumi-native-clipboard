@@ -1,0 +1,4 @@
+interface:
+  display_name: "秀米原生剪切板"
+  short_description: "生成、校验并预览可直接粘贴到秀米的原生组件 JSON 稿件"
+  default_prompt: "Use $xiumi-native-clipboard to create a polished Xiumi-native JSON article and give me its preloaded local preview URL."

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://gih10012.github.io/xiumi-native-clipboard/schema/xiumi-document.schema.json",
+  "format": "xiumi-native-clipboard",
+  "formatVersion": 1,
+  "meta": {
+    "title": "秀米原生剪切板演示",
+    "previewWidth": 415,
+    "generator": "xiumi-native-clipboard demo"
+  },
+  "clipboard": {
+    "refreshLabelTimestamp": true,
+    "formats": [
+      {
+        "mime": "application/xiumi-comps; category=paper.comp",
+        "encoding": "json",
+        "data": {
+          "version": 5,
+          "deskVersion": 5,
+          "type": "paper",
+          "category": "comp",
+          "pageRuntimeKey": -1,
+          "_comp": {"style": null},
+          "slices": [
+            {
+              "_comp": {"constraint": {"pose": {"resize": "h"}}, "pose": {}, "style": {"padding": "22px 18px 8px"}, "tplId": "paper-cp:layout/wrapper-flex", "_$uuid": "comp-demo-wrapper-01", "_viewport": {"WIDTH": 415}},
+              "col1": {
+                "type": "container",
+                "constraint": {"childLayout": "static", "containerUsage": "flex-box"},
+                "style": {},
+                "items": [
+                  {
+                    "_comp": {"constraint": {"opMenu": {"text-merged": true}, "pose": {"resize": "h"}}, "pose": {}, "style": {}, "tplId": "paper-cp:header/1-txt-normal", "_$uuid": "comp-demo-text-01"},
+                    "txt1": {"type": "text", "text": "<p><strong>秀米原生剪切板</strong></p><p><span style=\"font-size:58%;\">JSON → 预览 → 原生组件粘贴</span></p>", "style": {"textAlign": "center", "fontSize": "190%", "lineHeight": "1.5", "letterSpacing": "2px", "color": "rgb(224,83,65)"}, "constraint": {}}
+                  }
+                ]
+              }
+            },
+            {
+              "_comp": {"constraint": {"pose": {"resize": "h"}, "opMenu": {"group-cell-merged": true}}, "style": {"display": "flex", "flexDirection": "row", "flexWrap": "nowrap", "margin": "12px 18px 24px"}, "tplId": "paper-cp:layout/row1-r1c2", "pose": {"position": "static", "width": null, "height": null}, "_$uuid": "comp-demo-row-01", "_viewport": {"WIDTH": 415}},
+              "col1": {"type": "group", "constraint": {"childLayout": "static"}, "style": {"width": "50%", "flex": "1 1 0%", "marginRight": "6px", "padding": "20px 12px", "backgroundColor": "rgb(255,239,213)", "borderRadius": "18px"}, "items": [{"_comp": {"constraint": {"opMenu": {"text-merged": true}, "pose": {"resize": "h"}}, "pose": {}, "style": {}, "tplId": "paper-cp:header/1-txt-normal", "_$uuid": "comp-demo-text-02"}, "txt1": {"type": "text", "text": "<p><strong>真横排</strong></p><p>图片与文字都是独立组件</p>", "style": {"textAlign": "center", "fontSize": "105%", "lineHeight": "1.8", "color": "rgb(120,74,44)"}, "constraint": {}}}]},
+              "col2": {"type": "group", "constraint": {"childLayout": "static"}, "style": {"width": "50%", "flex": "1 1 0%", "marginLeft": "6px", "padding": "20px 12px", "backgroundColor": "rgb(232,244,207)", "borderRadius": "18px"}, "items": [{"_comp": {"constraint": {"opMenu": {"text-merged": true}, "pose": {"resize": "h"}}, "pose": {}, "style": {}, "tplId": "paper-cp:header/1-txt-normal", "_$uuid": "comp-demo-text-03"}, "txt1": {"type": "text", "text": "<p><strong>真粘贴</strong></p><p>进入秀米后仍可继续编辑</p>", "style": {"textAlign": "center", "fontSize": "105%", "lineHeight": "1.8", "color": "rgb(56,90,54)"}, "constraint": {}}}]}
+            }
+          ]
+        }
+      },
+      {
+        "mime": "application/xiumi-label; origin=studio",
+        "encoding": "json",
+        "data": {"timestamp": "$now"}
+      }
+    ]
+  }
+}
