@@ -14,6 +14,7 @@ After generation:
 1. Run `python3 scripts/xiumi_clipboard.py validate ARTICLE.xiumi.json`.
 2. Start `python3 scripts/xiumi_clipboard.py serve ARTICLE.xiumi.json` in a persistent process.
 3. Give the user the printed localhost URL. Keep the process alive while they preview and copy.
-4. If clipboard compatibility needs diagnosis, run `pack`, inspect the binary with `unpack`, and compare the round trip.
+4. The localhost copy button uses a same-origin system clipboard bridge when `wl-copy` or `xclip` is available. If it reports that the bridge is unavailable, tell the user to press a real `Ctrl+C` in the preview page before pasting into Xiumi.
+5. If clipboard compatibility needs diagnosis, run `pack`, inspect the binary with `unpack`, and compare the round trip.
 
 Use the exact Xiumi MIME names documented in the reference. Do not substitute ordinary HTML import or Async Clipboard `web ...` formats. Never commit a user's article images or Xiumi UID to a public repository unless they explicitly authorize publication.

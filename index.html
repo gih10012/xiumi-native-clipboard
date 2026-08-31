@@ -37,7 +37,7 @@
           <div class="fact"><b id="componentCount">0</b><span>可编辑组件</span></div>
           <div class="fact"><b id="formatCount">0</b><span>剪切板格式</span></div>
         </div>
-        <p class="hint">载入后点击按钮，或在本页按 <kbd>Ctrl</kbd> + <kbd>C</kbd>；看到成功提示后，到秀米按 <kbd>Ctrl</kbd> + <kbd>V</kbd>。</p>
+        <p class="hint">本地预载网址可点击按钮；在线页面请按 <kbd>Ctrl</kbd> + <kbd>C</kbd>。看到成功提示后，到秀米按 <kbd>Ctrl</kbd> + <kbd>V</kbd>。</p>
       </aside>
       <section class="panel preview-panel">
         <div class="preview-head"><div class="document-title" id="documentTitle">尚未载入稿件</div><div class="scale-note">415px 秀米画布</div></div>
@@ -52,7 +52,8 @@
     const COMPS_MIME = "application/xiumi-comps; category=paper.comp";
     const LABEL_MIME = "application/xiumi-label; origin=studio";
     const MAX_BYTES = 80 * 1024 * 1024;
-    const state = { document: null, warnings: [], stats: null };
+    const query = new URLSearchParams(location.search);
+    const state = { document: null, warnings: [], stats: null, copyEndpoint: query.get("copy") };
     const $ = id => document.getElementById(id);
     const nodes = { file: $("fileInput"), drop: $("dropZone"), demo: $("demoButton"), clear: $("clearButton"), copy: $("copyButton"), status: $("status"), facts: $("facts"), paper: $("paper"), title: $("documentTitle"), toast: $("toast") };
 
@@ -209,6 +210,10 @@
     }
     function onCopy(event) {
       if (!state.document || !event.clipboardData) return;
+      if (!event.isTrusted) {
+        setStatus("浏览器不会把脚本模拟的复制写成私有格式，请在本页真实按下 Ctrl+C。", "bad");
+        return;
+      }
       try {
         for (const format of materializedFormats()) event.clipboardData.setData(format.mime, format.value);
         event.clipboardData.setData("text/plain", state.document.meta.title || "Xiumi document");
@@ -216,15 +221,37 @@
         setStatus(`已写入 Chromium 原生剪切板。\n现在去秀米按 Ctrl+V。`, "good"); toast("复制成功，去秀米粘贴");
       } catch (error) { setStatus(`复制失败：${error.message}`, "bad"); }
     }
+    async function copyFromButton() {
+      if (!state.document) return;
+      if (!state.copyEndpoint) {
+        setStatus("在线页面受浏览器安全限制：现在请在本页按 Ctrl+C，随后到秀米按 Ctrl+V。", "good");
+        toast("请按 Ctrl+C 完成原生复制");
+        document.body.focus();
+        return;
+      }
+      nodes.copy.disabled = true;
+      setStatus("正在通过本机桥接写入原生剪切板……");
+      try {
+        const response = await fetch(state.copyEndpoint, { method: "POST", cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        setStatus(`已通过本机桥接写入 Chromium 原生剪切板（${result.bytes} bytes）。\n现在去秀米按 Ctrl+V。`, "good");
+        toast("复制成功，去秀米粘贴");
+      } catch (error) {
+        setStatus(`一键桥接不可用：${error.message}\n请在本页按 Ctrl+C 完成原生复制。`, "bad");
+        toast("请改用 Ctrl+C");
+        document.body.focus();
+      } finally { nodes.copy.disabled = false; }
+    }
     nodes.file.addEventListener("change", () => loadFile(nodes.file.files[0]));
     nodes.drop.addEventListener("dragover", event => { event.preventDefault(); nodes.drop.classList.add("drag"); });
     nodes.drop.addEventListener("dragleave", () => nodes.drop.classList.remove("drag"));
     nodes.drop.addEventListener("drop", event => { event.preventDefault(); nodes.drop.classList.remove("drag"); loadFile(event.dataTransfer.files[0]); });
     nodes.demo.addEventListener("click", () => loadURL("examples/demo.xiumi.json").catch(error => setStatus(error.message, "bad")));
     nodes.clear.addEventListener("click", () => clearDocument());
-    nodes.copy.addEventListener("click", () => { if (!document.execCommand("copy")) setStatus("浏览器未执行复制，请在本页按 Ctrl+C。", "bad"); });
+    nodes.copy.addEventListener("click", copyFromButton);
     document.addEventListener("copy", onCopy);
-    const source = new URLSearchParams(location.search).get("src");
+    const source = query.get("src");
     if (source) loadURL(source).catch(error => setStatus(`自动载入失败：${error.message}`, "bad"));
   })();
   </script>

@@ -139,8 +139,10 @@ try {
   cdp = connectCDP(page.webSocketDebuggerUrl);
   await cdp.ready;
   await cdp.send("Runtime.enable");
+  await cdp.send("Page.bringToFront");
+  await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true });
   const expectedJSON = JSON.stringify(expected);
-  const evaluation = await cdp.send("Runtime.evaluate", {
+  await cdp.send("Runtime.evaluate", {
     userGesture: true,
     awaitPromise: true,
     returnByValue: true,
@@ -149,14 +151,8 @@ try {
       for(let i=0;i<600 && document.getElementById("sliceCount").textContent!==String(expected.slices);i++) await new Promise(r=>setTimeout(r,50));
       const images=[...document.querySelectorAll("#paper img")];
       await Promise.all(images.map(image=>image.complete?Promise.resolve():new Promise(resolve=>{image.addEventListener("load",resolve,{once:true});image.addEventListener("error",resolve,{once:true});})));
-      window.__copyTypes=[];
-      document.addEventListener("copy",event=>{window.__copyTypes=[...event.clipboardData.types]},{once:true});
-      const copyResult=document.execCommand("copy");
-      await new Promise(r=>setTimeout(r,80));
-      return {
-        copyResult,
-        copyTypes:window.__copyTypes,
-        status:document.getElementById("status").textContent,
+      window.__copyProbe=null;
+      window.__smokeStats={
         title:document.getElementById("documentTitle").textContent,
         slices:Number(document.getElementById("sliceCount").textContent),
         components:Number(document.getElementById("componentCount").textContent),
@@ -164,11 +160,34 @@ try {
         imageDom:images.length,
         imageDecoded:images.filter(image=>image.complete&&image.naturalWidth>0).length
       };
+      document.addEventListener("copy",event=>{window.__copyProbe={trusted:event.isTrusted,types:[...event.clipboardData.types]}},{once:true});
+      document.body.tabIndex=-1;
+      document.body.focus();
+      const range=document.createRange();
+      range.selectNodeContents(document.getElementById("documentTitle"));
+      const selection=getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return window.__smokeStats;
     })()`,
   });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await cdp.send("Page.bringToFront");
+    await cdp.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Control", code: "ControlLeft", windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 37, modifiers: 2 });
+    await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "c", code: "KeyC", windowsVirtualKeyCode: 67, nativeVirtualKeyCode: 54, modifiers: 2, commands: ["Copy"] });
+    await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "c", code: "KeyC", windowsVirtualKeyCode: 67, nativeVirtualKeyCode: 54, modifiers: 2 });
+    await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Control", code: "ControlLeft", windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 37, modifiers: 0 });
+    await delay(120);
+    const probe = await cdp.send("Runtime.evaluate", { returnByValue: true, expression: "window.__copyProbe" });
+    if (probe.result.value) break;
+  }
+  const evaluation = await cdp.send("Runtime.evaluate", {
+    returnByValue: true,
+    expression: `({copyProbe:window.__copyProbe,status:document.getElementById("status").textContent,...window.__smokeStats})`,
+  });
   const actual = evaluation.result.value;
-  if (!actual.copyResult) fail("document.execCommand('copy') returned false");
-  for (const mime of [COMPS_MIME, LABEL_MIME, "text/plain"]) if (!actual.copyTypes.includes(mime)) fail(`copy event is missing ${mime}`);
+  if (!actual.copyProbe?.trusted) fail(`expected a trusted copy event, got ${JSON.stringify(actual.copyProbe)}`);
+  for (const mime of [COMPS_MIME, LABEL_MIME, "text/plain"]) if (!actual.copyProbe.types.includes(mime)) fail(`copy event is missing ${mime}`);
   for (const key of ["title", "slices", "components"]) if (actual[key] !== expected[key]) fail(`${key}: expected ${expected[key]}, got ${actual[key]}`);
   for (const key of ["imageStat", "imageDom", "imageDecoded"]) if (actual[key] !== expected.images) fail(`${key}: expected ${expected.images}, got ${actual[key]}`);
   if (!actual.status.includes("已写入 Chromium 原生剪切板")) fail(`unexpected status: ${actual.status}`);

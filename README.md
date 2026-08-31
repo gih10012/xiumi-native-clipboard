@@ -8,7 +8,7 @@
 
 1. 用桌面版 Edge 或 Chrome 打开在线工具。
 2. 选择或拖入 `.xiumi.json` 文件。
-3. 检查预览，点击“复制到秀米”或按 `Ctrl+C`。
+3. 检查预览，在页面内真实按下 `Ctrl+C`。
 4. 回到秀米编辑器按 `Ctrl+V`。
 
 文章和图片只在本地浏览器中解析；选择本地文件不会上传内容。
@@ -19,7 +19,7 @@
 python3 skills/xiumi-native-clipboard/scripts/xiumi_clipboard.py serve ARTICLE.xiumi.json
 ```
 
-命令会打印形如 `http://127.0.0.1:PORT/?src=...` 的地址。服务仅监听本机回环地址，并且不会复制或缓存稿件。
+命令会打印形如 `http://127.0.0.1:PORT/?src=...&copy=...` 的地址。这个本机网址不仅会自动载入稿件，还能让“复制到秀米”按钮通过 `wl-copy` 或 `xclip` 直接写入 Chromium 私有剪切板；若系统没有可用的剪切板工具，页面会提示改用真实 `Ctrl+C`。服务仅监听本机回环地址，不会上传或缓存稿件。
 
 ## CLI
 
@@ -48,7 +48,7 @@ ln -s "$(pwd)/skills/xiumi-native-clipboard" ~/.codex/skills/xiumi-native-clipbo
 
 ## 兼容性
 
-复制过程使用 Chromium 的 DataTransfer 自定义格式，由浏览器生成秀米能够读取的私有剪切板容器。首版目标为桌面版 Edge/Chrome；Firefox 和 Safari 不在兼容范围内。
+复制过程使用 Chromium 的 DataTransfer 自定义格式，由真实 `Ctrl+C` 生成秀米能够读取的私有剪切板容器。本地服务的按钮提供等价的系统剪切板桥接。首版目标为桌面版 Edge/Chrome；Firefox 和 Safari 不在兼容范围内。
 
 ## 开发验证
 

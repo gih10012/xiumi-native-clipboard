@@ -8,8 +8,11 @@ import base64
 import binascii
 import copy
 import json
+import os
 import secrets
+import shutil
 import struct
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -228,11 +231,40 @@ def write_json(path: str | Path, value: dict[str, Any]) -> None:
     Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def start_clipboard_provider(blob: bytes) -> subprocess.Popen:
+    if shutil.which("wl-copy") and os.environ.get("WAYLAND_DISPLAY"):
+        command = ["wl-copy", "--foreground", "--type", "chromium/x-web-custom-data"]
+    elif shutil.which("xclip") and os.environ.get("DISPLAY"):
+        command = ["xclip", "-selection", "clipboard", "-target", "chromium/x-web-custom-data", "-in"]
+    else:
+        raise DocumentError("no supported system clipboard helper; use a real Ctrl+C in desktop Chromium")
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        assert process.stdin is not None
+        process.stdin.write(blob)
+        process.stdin.close()
+    except (BrokenPipeError, OSError) as exc:
+        process.terminate()
+        raise DocumentError(f"clipboard provider failed: {exc}") from exc
+    time.sleep(0.04)
+    if process.poll() not in (None, 0):
+        raise DocumentError(f"clipboard provider exited with status {process.returncode}")
+    return process
+
+
 def serve_document(document_path: Path, port: int, open_browser: bool) -> None:
+    document = load_json(document_path)
     document_bytes = document_path.read_bytes()
     index_bytes = (REPO_ROOT / "index.html").read_bytes()
     token = secrets.token_urlsafe(18)
     document_route = f"/document/{token}.json"
+    copy_route = f"/copy/{token}"
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802
@@ -245,6 +277,35 @@ def serve_document(document_path: Path, port: int, open_browser: bool) -> None:
                 self._send((REPO_ROOT / "schema" / "xiumi-document.schema.json").read_bytes(), "application/schema+json")
             else:
                 self.send_error(HTTPStatus.NOT_FOUND)
+
+        def do_POST(self):  # noqa: N802
+            path = urllib.parse.urlsplit(self.path).path
+            if path != copy_route:
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            try:
+                blob = pack_custom(materialize_formats(document))
+                previous = getattr(self.server, "clipboard_process", None)
+                if previous and previous.poll() is None:
+                    previous.terminate()
+                    try:
+                        previous.wait(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        previous.kill()
+                provider = start_clipboard_provider(blob)
+                self.server.clipboard_process = provider
+                self._send(
+                    json.dumps({"ok": True, "bytes": len(blob)}, ensure_ascii=False).encode("utf-8"),
+                    "application/json; charset=utf-8",
+                )
+            except (DocumentError, OSError) as exc:
+                payload = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode("utf-8")
+                self.send_response(HTTPStatus.NOT_IMPLEMENTED)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(payload)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(payload)
 
         def _send(self, payload: bytes, content_type: str):
             self.send_response(HTTPStatus.OK)
@@ -261,7 +322,8 @@ def serve_document(document_path: Path, port: int, open_browser: bool) -> None:
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     actual_port = server.server_address[1]
     source = urllib.parse.quote(document_route, safe="/")
-    url = f"http://127.0.0.1:{actual_port}/?src={source}"
+    copy_endpoint = urllib.parse.quote(copy_route, safe="/")
+    url = f"http://127.0.0.1:{actual_port}/?src={source}&copy={copy_endpoint}"
     print(url, flush=True)
     if open_browser:
         webbrowser.open(url)
@@ -270,6 +332,9 @@ def serve_document(document_path: Path, port: int, open_browser: bool) -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        provider = getattr(server, "clipboard_process", None)
+        if provider and provider.poll() is None:
+            provider.terminate()
         server.server_close()
 
 

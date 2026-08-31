@@ -80,8 +80,10 @@ class StaticToolTests(unittest.TestCase):
     def test_single_file_tool_has_no_external_script(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertNotIn("<script src=", html)
+        self.assertNotIn('document.execCommand("copy")', html)
         self.assertIn("event.clipboardData.setData(format.mime", html)
         self.assertIn("document.addEventListener(\"copy\", onCopy)", html)
+        self.assertIn("fetch(state.copyEndpoint", html)
 
     def test_schema_is_json(self):
         schema = json.loads((ROOT / "schema" / "xiumi-document.schema.json").read_text(encoding="utf-8"))
@@ -102,7 +104,9 @@ class StaticToolTests(unittest.TestCase):
             with opener.open(url, timeout=5) as response:
                 html = response.read().decode("utf-8")
             self.assertIn("秀米原生剪切板", html)
-            source = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)["src"][0]
+            query = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+            source = query["src"][0]
+            self.assertTrue(query["copy"][0].startswith("/copy/"))
             base = url.split("/?", 1)[0]
             with opener.open(base + source, timeout=5) as response:
                 document = json.loads(response.read())

@@ -58,4 +58,4 @@ python3 scripts/xiumi_clipboard.py unpack ARTICLE.bin -o ROUNDTRIP.xiumi.json
 python3 scripts/xiumi_clipboard.py serve ARTICLE.xiumi.json
 ```
 
-The server binds only to `127.0.0.1`, serves the selected document without copying it, disables caching, and prints a URL whose `src` query has already selected that document.
+The server binds only to `127.0.0.1`, disables caching, and prints a URL whose `src` query has already selected that document. Its tokenized `copy` endpoint lets the page button write `chromium/x-web-custom-data` through `wl-copy` or `xclip`; when no supported helper is available, use a real `Ctrl+C` in desktop Chromium.
