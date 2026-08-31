@@ -54,6 +54,7 @@ ln -s "$(pwd)/skills/xiumi-native-clipboard" ~/.codex/skills/xiumi-native-clipbo
 
 ```bash
 python3 -m unittest discover -s tests -v
+node tests/browser_smoke.mjs examples/demo.xiumi.json
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/xiumi-native-clipboard
 ```
 
