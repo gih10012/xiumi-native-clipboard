@@ -177,5 +177,5 @@ try {
   if (cdp) cdp.close();
   await stop(chrome);
   await stop(server);
-  if (profile) await rm(profile, { recursive: true, force: true });
+  if (profile) await rm(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 });
 }
