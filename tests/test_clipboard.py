@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -51,7 +52,19 @@ class ValidationTests(unittest.TestCase):
 
     def test_demo_is_valid(self):
         stats = clipboard.validate_document(self.demo)
-        self.assertEqual(stats, {"formats": 2, "slices": 2, "components": 5, "images": 0, "warnings": 0})
+        self.assertEqual(
+            stats,
+            {
+                "formats": 2,
+                "slices": 2,
+                "components": 5,
+                "images": 0,
+                "embedded_images": 0,
+                "remote_images": 0,
+                "save_ready": True,
+                "warnings": 0,
+            },
+        )
 
     def test_duplicate_uuid_is_rejected(self):
         broken = copy.deepcopy(self.demo)
@@ -68,6 +81,20 @@ class ValidationTests(unittest.TestCase):
             doc = components.document("image", [components.wrapper([components.image(components.data_uri(image_path))])])
             stats = clipboard.validate_document(doc)
             self.assertEqual(stats["images"], 1)
+            self.assertEqual(stats["embedded_images"], 1)
+            self.assertFalse(stats["save_ready"])
+            with self.assertRaisesRegex(clipboard.DocumentError, "not save-ready"):
+                clipboard.validate_document(doc, require_save_ready=True)
+
+    def test_remote_image_is_save_ready(self):
+        doc = components.document(
+            "localized image",
+            [components.wrapper([components.image("https://statics.example.test/xiumi-image.png")])],
+        )
+        stats = clipboard.validate_document(doc, require_save_ready=True)
+        self.assertEqual(stats["remote_images"], 1)
+        self.assertEqual(stats["embedded_images"], 0)
+        self.assertTrue(stats["save_ready"])
 
     def test_invalid_base64_is_rejected(self):
         image = components.image("data:image/png;base64,not-valid!")
@@ -82,8 +109,11 @@ class StaticToolTests(unittest.TestCase):
         self.assertNotIn("<script src=", html)
         self.assertNotIn('document.execCommand("copy")', html)
         self.assertIn("event.clipboardData.setData(format.mime", html)
+        self.assertIn('event.clipboardData.setData("text/html", uploadSheet', html)
         self.assertIn("document.addEventListener(\"copy\", onCopy)", html)
+        self.assertIn("document.addEventListener(\"paste\", onPaste)", html)
         self.assertIn("fetch(state.copyEndpoint", html)
+        self.assertIn("body: JSON.stringify(state.document)", html)
 
     def test_schema_is_json(self):
         schema = json.loads((ROOT / "schema" / "xiumi-document.schema.json").read_text(encoding="utf-8"))
@@ -111,6 +141,25 @@ class StaticToolTests(unittest.TestCase):
             with opener.open(base + source, timeout=5) as response:
                 document = json.loads(response.read())
             self.assertEqual(document["formatVersion"], 1)
+
+            embedded = components.document(
+                "draft",
+                [components.wrapper([components.image("data:image/png;base64,aGVsbG8=")])],
+            )
+            request = urllib.request.Request(
+                base + query["copy"][0],
+                data=json.dumps(embedded).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                opener.open(request, timeout=5)
+            try:
+                self.assertEqual(raised.exception.code, 422)
+                payload = json.loads(raised.exception.read())
+                self.assertIn("not save-ready", payload["error"])
+            finally:
+                raised.exception.close()
         finally:
             process.terminate()
             process.wait(timeout=5)

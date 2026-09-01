@@ -1,0 +1,66 @@
+{
+  "$schema": "https://gih10012.github.io/xiumi-native-clipboard/schema/xiumi-document.schema.json",
+  "format": "xiumi-native-clipboard",
+  "formatVersion": 1,
+  "meta": {
+    "title": "秀米图片本地化演示",
+    "previewWidth": 415,
+    "generator": "xiumi-native-clipboard image draft demo"
+  },
+  "clipboard": {
+    "refreshLabelTimestamp": true,
+    "formats": [
+      {
+        "mime": "application/xiumi-comps; category=paper.comp",
+        "encoding": "json",
+        "data": {
+          "version": 5,
+          "deskVersion": 5,
+          "type": "paper",
+          "category": "comp",
+          "pageRuntimeKey": -1,
+          "_comp": {"style": null},
+          "slices": [
+            {
+              "_comp": {
+                "constraint": {"pose": {"resize": "h"}},
+                "pose": {},
+                "style": {"padding": "20px"},
+                "tplId": "paper-cp:layout/wrapper-flex",
+                "_$uuid": "comp-image-draft-wrapper-01",
+                "_viewport": {"WIDTH": 415}
+              },
+              "col1": {
+                "type": "container",
+                "constraint": {"childLayout": "static", "containerUsage": "flex-box"},
+                "style": {},
+                "items": [
+                  {
+                    "_comp": {
+                      "tplId": "paper-cp:image/img-autowidth",
+                      "constraint": {"opMenu": {"crop-image-merged": true}, "pose": {"resize": "h"}},
+                      "style": {"textAlign": "center", "lineHeight": "0"},
+                      "pose": {"position": "static", "width": null, "height": null, "zIndex": 1},
+                      "_$uuid": "comp-image-draft-image-01"
+                    },
+                    "img1": {
+                      "type": "image",
+                      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+                      "style": {"width": "100%", "height": "auto", "maxWidth": "100%"},
+                      "constraint": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "mime": "application/xiumi-label; origin=studio",
+        "encoding": "json",
+        "data": {"timestamp": "$now"}
+      }
+    ]
+  }
+}

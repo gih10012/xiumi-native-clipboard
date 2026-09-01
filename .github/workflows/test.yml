@@ -24,3 +24,4 @@ jobs:
       - run: sudo apt-get update
       - run: sudo apt-get install --no-install-recommends -y xvfb xauth
       - run: xvfb-run -a env BROWSER_SMOKE_HEADED=1 node tests/browser_smoke.mjs examples/demo.xiumi.json
+      - run: xvfb-run -a env BROWSER_SMOKE_HEADED=1 node tests/browser_smoke.mjs examples/image-draft.xiumi.json

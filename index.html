@@ -9,7 +9,7 @@
     :root{--ink:#24322a;--muted:#6e786f;--paper:#fffdf8;--line:#e7dfd1;--red:#e55c49;--green:#3f5b45;--yellow:#f4c655;--blue:#72c8df;--shadow:0 18px 55px rgba(47,53,45,.12)}
     *{box-sizing:border-box}html{min-height:100%;background:#f5f1e8}body{min-height:100vh;margin:0;color:var(--ink);font:15px/1.65 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 8% 3%,rgba(244,198,85,.22),transparent 24rem),radial-gradient(circle at 95% 10%,rgba(114,200,223,.2),transparent 28rem),#f5f1e8}
     button,input{font:inherit}.shell{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:34px 0 60px}.masthead{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}.brand{display:flex;gap:14px;align-items:center}.mark{display:grid;place-items:center;width:52px;height:52px;border-radius:17px;background:var(--green);color:#fff;font-size:25px;font-weight:900;box-shadow:0 9px 0 rgba(63,91,69,.14)}h1{margin:0;font-size:clamp(24px,3vw,38px);line-height:1.2;letter-spacing:-.03em}.subtitle{margin:5px 0 0;color:var(--muted)}.tag{padding:7px 12px;border:1px solid rgba(63,91,69,.2);border-radius:999px;background:rgba(255,255,255,.55);color:var(--green);font-weight:750;white-space:nowrap}
-    .workspace{display:grid;grid-template-columns:minmax(290px,350px) minmax(0,1fr);gap:22px;align-items:start}.panel{border:1px solid rgba(87,79,61,.13);border-radius:24px;background:rgba(255,253,248,.92);box-shadow:var(--shadow);overflow:hidden}.controls{position:sticky;top:18px;padding:20px}.eyebrow{margin:0 0 5px;color:var(--red);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.controls h2{margin:0 0 15px;font-size:21px}.drop{display:grid;place-items:center;min-height:142px;padding:18px;border:2px dashed #d8cdb9;border-radius:18px;background:#fffaf0;text-align:center;cursor:pointer;transition:.18s ease}.drop:hover,.drop.drag{border-color:var(--red);background:#fff5e4;transform:translateY(-1px)}.drop strong{display:block;font-size:16px}.drop span{display:block;margin-top:5px;color:var(--muted);font-size:13px}.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}.btn{min-height:44px;border:0;border-radius:13px;padding:9px 12px;font-weight:850;cursor:pointer;transition:.16s ease}.btn:hover:not(:disabled){transform:translateY(-1px)}.btn:disabled{cursor:not-allowed;opacity:.42}.btn-primary{grid-column:1/-1;background:var(--red);color:white;box-shadow:0 7px 0 rgba(176,58,43,.17)}.btn-soft{background:#edf3e7;color:var(--green)}.btn-line{border:1px solid var(--line);background:white;color:var(--ink)}
+    .workspace{display:grid;grid-template-columns:minmax(290px,370px) minmax(0,1fr);gap:22px;align-items:start}.panel{border:1px solid rgba(87,79,61,.13);border-radius:24px;background:rgba(255,253,248,.92);box-shadow:var(--shadow);overflow:hidden}.controls{position:sticky;top:18px;padding:20px}.eyebrow{margin:0 0 5px;color:var(--red);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.controls h2{margin:0 0 15px;font-size:21px}.drop{display:grid;place-items:center;min-height:126px;padding:18px;border:2px dashed #d8cdb9;border-radius:18px;background:#fffaf0;text-align:center;cursor:pointer;transition:.18s ease}.drop:hover,.drop.drag{border-color:var(--red);background:#fff5e4;transform:translateY(-1px)}.drop strong{display:block;font-size:16px}.drop span{display:block;margin-top:5px;color:var(--muted);font-size:13px}.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}.btn{min-height:44px;border:0;border-radius:13px;padding:9px 12px;font-weight:850;cursor:pointer;transition:.16s ease}.btn:hover:not(:disabled){transform:translateY(-1px)}.btn:disabled{cursor:not-allowed;opacity:.42}.btn[hidden]{display:none}.btn-primary{grid-column:1/-1;background:var(--red);color:white;box-shadow:0 7px 0 rgba(176,58,43,.17)}.btn-upload{grid-column:1/-1;background:#f1bd4d;color:#3d331d;box-shadow:0 7px 0 rgba(163,117,25,.15)}.btn-soft{background:#edf3e7;color:var(--green)}.btn-line{border:1px solid var(--line);background:white;color:var(--ink)}
     .status{margin-top:15px;padding:13px 14px;border-radius:14px;background:#f2efe7;color:var(--muted);font-size:13px;white-space:pre-wrap;word-break:break-word}.status.good{background:#eaf3e3;color:#35573b}.status.bad{background:#fff0ed;color:#a43e31}.facts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}.fact{padding:11px;border:1px solid var(--line);border-radius:13px;background:white}.fact b{display:block;font-size:18px;color:var(--green)}.fact span{color:var(--muted);font-size:12px}.hint{margin:15px 2px 0;color:var(--muted);font-size:13px}.hint kbd{display:inline-block;border:1px solid #d2c7b6;border-bottom-width:3px;border-radius:6px;background:#fff;padding:0 6px;color:var(--ink);font:12px/22px inherit}
     .preview-panel{min-height:680px;background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(247,243,234,.9))}.preview-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.7)}.document-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850}.scale-note{color:var(--muted);font-size:12px;white-space:nowrap}.stage{display:flex;justify-content:center;padding:28px 18px 52px;overflow:auto}.paper{width:415px;max-width:100%;min-height:560px;background:white;box-shadow:0 7px 28px rgba(37,42,36,.12);overflow:visible}.paper.empty{display:grid;place-items:center;padding:40px;color:#9b978e;text-align:center}.paper.empty:before{content:"选择一个 .xiumi.json\A这里会出现真实排版预览";white-space:pre-line}.xiumi-slice,.xiumi-comp,.xiumi-cell{box-sizing:border-box}.xiumi-comp img{display:inline-block;vertical-align:middle}.xiumi-text p{margin:0}.unsupported{outline:2px dashed rgba(229,92,73,.5);outline-offset:-2px}.toast{position:fixed;left:50%;bottom:28px;z-index:99;transform:translate(-50%,18px);padding:11px 18px;border-radius:999px;background:#26372c;color:#fff;font-weight:800;opacity:0;pointer-events:none;transition:.2s ease;box-shadow:0 12px 32px rgba(0,0,0,.22)}.toast.show{opacity:1;transform:translate(-50%,0)}
     @media(max-width:820px){.shell{width:min(100% - 20px,620px);padding-top:20px}.masthead{align-items:center}.tag{display:none}.workspace{grid-template-columns:1fr}.controls{position:static}.preview-panel{min-height:520px}.stage{padding:18px 8px 36px}}
@@ -18,26 +18,29 @@
 <body>
   <main class="shell">
     <header class="masthead">
-      <div class="brand"><div class="mark">秀</div><div><h1>秀米原生剪切板</h1><p class="subtitle">载入整体 JSON，预览后原生复制，不再折腾 HTML 导入。</p></div></div>
+      <div class="brand"><div class="mark">秀</div><div><h1>秀米原生剪切板</h1><p class="subtitle">先让秀米接管图片，再原生复制完整排版。</p></div></div>
       <div class="tag">Chromium · Xiumi Native</div>
     </header>
     <section class="workspace">
       <aside class="panel controls">
         <p class="eyebrow">STEP 01</p><h2>载入稿件</h2>
-        <label class="drop" id="dropZone"><div><strong>选择或拖入 JSON 文件</strong><span>.xiumi.json · 图片已内嵌</span></div><input id="fileInput" type="file" accept=".json,.xiumi.json,application/json"></label>
+        <label class="drop" id="dropZone"><div><strong>选择或拖入 JSON 文件</strong><span>.xiumi.json · 本地预览不会上传</span></div><input id="fileInput" type="file" accept=".json,.xiumi.json,application/json"></label>
         <div class="actions">
           <button class="btn btn-soft" id="demoButton" type="button">打开演示</button>
           <button class="btn btn-line" id="clearButton" type="button">清空</button>
-          <button class="btn btn-primary" id="copyButton" type="button" disabled>复制到秀米</button>
+          <button class="btn btn-upload" id="localizeButton" type="button" disabled hidden>① 复制图片上传单</button>
+          <button class="btn btn-soft" id="downloadButton" type="button" disabled hidden>下载保存版 JSON</button>
+          <button class="btn btn-primary" id="copyButton" type="button" disabled>② 复制保存版到秀米</button>
         </div>
         <div class="status" id="status">等待载入 JSON。</div>
         <div class="facts" id="facts" hidden>
           <div class="fact"><b id="sliceCount">0</b><span>原生片段</span></div>
-          <div class="fact"><b id="imageCount">0</b><span>内嵌图片</span></div>
+          <div class="fact"><b id="imageCount">0</b><span>图片总数</span></div>
+          <div class="fact"><b id="embeddedCount">0</b><span>待本地化</span></div>
+          <div class="fact"><b id="remoteCount">0</b><span>已持久化</span></div>
           <div class="fact"><b id="componentCount">0</b><span>可编辑组件</span></div>
-          <div class="fact"><b id="formatCount">0</b><span>剪切板格式</span></div>
         </div>
-        <p class="hint">本地预载网址可点击按钮；在线页面请按 <kbd>Ctrl</kbd> + <kbd>C</kbd>。看到成功提示后，到秀米按 <kbd>Ctrl</kbd> + <kbd>V</kbd>。</p>
+        <p class="hint">含本地图片时，先按提示生成上传单。秀米完成上传后复制临时稿，回到本页按 <kbd>Ctrl</kbd> + <kbd>V</kbd>。显示“保存就绪”后再复制整篇。</p>
       </aside>
       <section class="panel preview-panel">
         <div class="preview-head"><div class="document-title" id="documentTitle">尚未载入稿件</div><div class="scale-note">415px 秀米画布</div></div>
@@ -53,9 +56,21 @@
     const LABEL_MIME = "application/xiumi-label; origin=studio";
     const MAX_BYTES = 80 * 1024 * 1024;
     const query = new URLSearchParams(location.search);
-    const state = { document: null, warnings: [], stats: null, copyEndpoint: query.get("copy") };
+    const state = {
+      document: null,
+      warnings: [],
+      stats: null,
+      copyEndpoint: query.get("copy"),
+      copyMode: null,
+      localization: null,
+      sourceLabel: ""
+    };
     const $ = id => document.getElementById(id);
-    const nodes = { file: $("fileInput"), drop: $("dropZone"), demo: $("demoButton"), clear: $("clearButton"), copy: $("copyButton"), status: $("status"), facts: $("facts"), paper: $("paper"), title: $("documentTitle"), toast: $("toast") };
+    const nodes = {
+      file: $("fileInput"), drop: $("dropZone"), demo: $("demoButton"), clear: $("clearButton"),
+      localize: $("localizeButton"), download: $("downloadButton"), copy: $("copyButton"),
+      status: $("status"), facts: $("facts"), paper: $("paper"), title: $("documentTitle"), toast: $("toast")
+    };
 
     function setStatus(message, kind = "") { nodes.status.textContent = message; nodes.status.className = `status ${kind}`.trim(); }
     function toast(message) { nodes.toast.textContent = message; nodes.toast.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => nodes.toast.classList.remove("show"), 2400); }
@@ -136,6 +151,50 @@
       if (Array.isArray(value)) value.forEach(item => walk(item, visitor));
       else if (value && typeof value === "object") { visitor(value); Object.values(value).forEach(item => walk(item, visitor)); }
     }
+    function isEmbeddedImage(src) {
+      return typeof src === "string" && /^data:image\/(?:gif|png|jpeg|bmp|webp|svg\+xml|svg)(?:;charset=utf-8)?;base64,/i.test(src);
+    }
+    function normalizeRemoteURL(src) {
+      if (typeof src !== "string") return null;
+      const value = src.trim();
+      if (value.startsWith("//")) return `https:${value}`;
+      return /^https?:\/\//i.test(value) ? value : null;
+    }
+    function uniqueEmbeddedSources(comps) {
+      const output = [], seen = new Set();
+      walk(comps.slices, node => {
+        const src = node.type === "image" ? node.src : null;
+        if (isEmbeddedImage(src) && !seen.has(src)) { seen.add(src); output.push(src); }
+      });
+      return output;
+    }
+    function uniqueRemoteSources(value) {
+      const output = [], seen = new Set();
+      walk(value, node => {
+        const src = node.type === "image" ? normalizeRemoteURL(node.src) : null;
+        if (src && !seen.has(src)) { seen.add(src); output.push(src); }
+      });
+      return output;
+    }
+    function remoteSourcesFromClipboard(clipboardData) {
+      const native = clipboardData.getData(COMPS_MIME);
+      if (native) {
+        try {
+          const sources = uniqueRemoteSources(JSON.parse(native));
+          if (sources.length) return sources;
+        } catch (_) {}
+      }
+      const html = clipboardData.getData("text/html");
+      if (!html) return [];
+      const template = document.createElement("template");
+      template.innerHTML = html;
+      const output = [], seen = new Set();
+      for (const image of template.content.querySelectorAll("img[src]")) {
+        const src = normalizeRemoteURL(image.getAttribute("src"));
+        if (src && !seen.has(src)) { seen.add(src); output.push(src); }
+      }
+      return output;
+    }
     function validate(value) {
       const errors = [];
       if (!value || typeof value !== "object" || Array.isArray(value)) errors.push("JSON 根节点必须是对象");
@@ -153,18 +212,26 @@
         if (entry.mime === COMPS_MIME) comps = entry.data;
       }
       if (!comps || !Array.isArray(comps.slices) || !comps.slices.length) errors.push("缺少秀米原生 slices");
-      const uuids = new Set(); let componentCount = 0, imageCount = 0;
+      const uuids = new Set(); let componentCount = 0, imageCount = 0, embeddedImageCount = 0, remoteImageCount = 0;
       if (comps) walk(comps.slices, node => {
         if (node._comp) { componentCount++; const id = node._comp._$uuid; if (!id) errors.push("组件缺少 UUID"); else if (uuids.has(id)) errors.push(`组件 UUID 重复：${id}`); else uuids.add(id); }
-        if (node.type === "image") { imageCount++; if (typeof node.src !== "string" || !node.src.startsWith("data:") || !node.src.includes(";base64,")) errors.push(`图片 ${imageCount} 未以内嵌 Base64 保存`); }
+        if (node.type === "image") {
+          imageCount++;
+          if (isEmbeddedImage(node.src)) {
+            embeddedImageCount++;
+            if (!node.src.split(",", 2)[1]) errors.push(`图片 ${imageCount} 的 Base64 内容为空`);
+          } else if (normalizeRemoteURL(node.src)) remoteImageCount++;
+          else errors.push(`图片 ${imageCount} 既不是内嵌图片，也不是持久化网址`);
+        }
       });
       if (errors.length) throw new Error([...new Set(errors)].join("\n"));
-      return { formats, comps, componentCount, imageCount };
+      return { formats, comps, componentCount, imageCount, embeddedImageCount, remoteImageCount, saveReady: embeddedImageCount === 0 };
     }
-    async function loadValue(value, sourceLabel) {
+    async function loadValue(value, sourceLabel, options = {}) {
       try {
         const checked = validate(value);
-        state.document = value; state.warnings = [];
+        state.document = value; state.warnings = []; state.stats = checked; state.sourceLabel = sourceLabel;
+        state.copyMode = null; state.localization = null;
         nodes.paper.replaceChildren(); nodes.paper.classList.remove("empty");
         const width = Number(value.meta.previewWidth) || 415;
         nodes.paper.style.width = `${Math.max(280, Math.min(1200, width))}px`;
@@ -172,12 +239,24 @@
         nodes.title.textContent = value.meta.title;
         $("sliceCount").textContent = checked.comps.slices.length;
         $("imageCount").textContent = checked.imageCount;
+        $("embeddedCount").textContent = checked.embeddedImageCount;
+        $("remoteCount").textContent = checked.remoteImageCount;
         $("componentCount").textContent = checked.componentCount;
-        $("formatCount").textContent = checked.formats.length;
-        nodes.facts.hidden = false; nodes.copy.disabled = false;
-        state.stats = checked;
+        nodes.facts.hidden = false;
+        nodes.localize.hidden = checked.embeddedImageCount === 0;
+        nodes.localize.disabled = checked.embeddedImageCount === 0;
+        nodes.copy.disabled = !checked.saveReady;
+        nodes.download.hidden = !checked.saveReady || checked.remoteImageCount === 0;
+        nodes.download.disabled = !checked.saveReady;
         const note = state.warnings.length ? `\n${[...new Set(state.warnings)].join("\n")}` : "";
-        setStatus(`已载入：${sourceLabel}\n${checked.comps.slices.length} 个片段，${checked.imageCount} 张图片。${note}`, "good");
+        if (checked.embeddedImageCount) {
+          setStatus(`已载入：${sourceLabel}\n含 ${checked.embeddedImageCount} 张待本地化图片，暂时不能复制保存版。请点击“① 复制图片上传单”。${note}`, "bad");
+        } else if (options.localized) {
+          setStatus(`图片已由秀米接管，${checked.remoteImageCount} 张图片已换成持久化网址。\n保存就绪：可下载 JSON，并点击“② 复制保存版到秀米”。${note}`, "good");
+          toast("图片持久化完成，保存就绪");
+        } else {
+          setStatus(`保存就绪：${sourceLabel}\n${checked.comps.slices.length} 个片段，${checked.imageCount} 张图片。${note}`, "good");
+        }
       } catch (error) { clearDocument(false); setStatus(error.message || String(error), "bad"); }
     }
     async function loadURL(url) {
@@ -195,9 +274,10 @@
       try { await loadValue(JSON.parse(await file.text()), file.name); } catch (error) { clearDocument(false); setStatus(`无法读取 JSON：${error.message}`, "bad"); }
     }
     function clearDocument(showMessage = true) {
-      state.document = null; state.stats = null; state.warnings = [];
+      state.document = null; state.stats = null; state.warnings = []; state.copyMode = null; state.localization = null; state.sourceLabel = "";
       nodes.paper.replaceChildren(); nodes.paper.className = "paper empty"; nodes.paper.removeAttribute("style");
-      nodes.title.textContent = "尚未载入稿件"; nodes.copy.disabled = true; nodes.facts.hidden = true; nodes.file.value = "";
+      nodes.title.textContent = "尚未载入稿件"; nodes.copy.disabled = true; nodes.localize.disabled = true; nodes.localize.hidden = true;
+      nodes.download.disabled = true; nodes.download.hidden = true; nodes.facts.hidden = true; nodes.file.value = "";
       if (showMessage) setStatus("已清空，等待载入 JSON。");
     }
     function materializedFormats() {
@@ -208,6 +288,20 @@
         return { mime: entry.mime, value: JSON.stringify(data) };
       });
     }
+    function uploadSheet(sources) {
+      const images = sources.map((src, index) => `<p style="margin:0 0 8px"><img src="${src}" alt="xiumi-upload-${index + 1}" style="display:block;width:100%;height:auto;margin:0"></p>`).join("");
+      return `<section data-xiumi-image-localization="1">${images}</section>`;
+    }
+    function beginLocalization() {
+      if (!state.document || !state.stats || !state.stats.embeddedImageCount) return;
+      const sources = uniqueEmbeddedSources(state.stats.comps);
+      if (!sources.length) return setStatus("没有找到可本地化的图片。", "bad");
+      state.copyMode = "upload-sheet";
+      state.localization = { sources, awaitingReturn: false };
+      setStatus(`上传单已准备：共 ${sources.length} 张不重复图片。\n现在请在本页真实按 Ctrl+C；随后粘贴到一个空白秀米临时稿，等图片出现后复制临时稿全文，再回本页按 Ctrl+V。`, "good");
+      toast("下一步：在本页按 Ctrl+C");
+      document.body.focus();
+    }
     function onCopy(event) {
       if (!state.document || !event.clipboardData) return;
       if (!event.isTrusted) {
@@ -215,14 +309,60 @@
         return;
       }
       try {
+        if (state.copyMode === "upload-sheet" && state.localization) {
+          event.clipboardData.setData("text/html", uploadSheet(state.localization.sources));
+          event.clipboardData.setData("text/plain", `${state.document.meta.title} · 图片上传单（${state.localization.sources.length} 张）`);
+          event.preventDefault();
+          state.copyMode = "awaiting-return";
+          state.localization.awaitingReturn = true;
+          setStatus(`图片上传单已复制（${state.localization.sources.length} 张）。\n请粘贴到空白秀米临时稿；图片加载完成后复制临时稿全文，回本页按 Ctrl+V。`, "good");
+          toast("上传单已复制，去秀米粘贴");
+          return;
+        }
+        if (!state.stats || !state.stats.saveReady) {
+          setStatus("这仍是内嵌图片草稿，不能直接原生复制。请先完成“① 复制图片上传单”。", "bad");
+          return;
+        }
         for (const format of materializedFormats()) event.clipboardData.setData(format.mime, format.value);
         event.clipboardData.setData("text/plain", state.document.meta.title || "Xiumi document");
         event.preventDefault();
         setStatus(`已写入 Chromium 原生剪切板。\n现在去秀米按 Ctrl+V。`, "good"); toast("复制成功，去秀米粘贴");
       } catch (error) { setStatus(`复制失败：${error.message}`, "bad"); }
     }
+    function onPaste(event) {
+      if (!state.document || !state.localization || !state.localization.awaitingReturn || !event.clipboardData) return;
+      try {
+        const remoteSources = remoteSourcesFromClipboard(event.clipboardData);
+        const expected = state.localization.sources;
+        if (remoteSources.length !== expected.length) {
+          setStatus(`没有收到完整的秀米图片回传：需要 ${expected.length} 张持久化图片，实际识别到 ${remoteSources.length} 张。\n请确认临时稿只放了这批图片，并使用秀米的“复制全文”后再回本页按 Ctrl+V。`, "bad");
+          return;
+        }
+        event.preventDefault();
+        const localized = clone(state.document);
+        const replacements = new Map(expected.map((src, index) => [src, remoteSources[index]]));
+        const format = localized.clipboard.formats.find(entry => entry.mime === COMPS_MIME);
+        walk(format.data.slices, node => {
+          if (node.type === "image" && replacements.has(node.src)) node.src = replacements.get(node.src);
+        });
+        localized.meta.imagePersistence = "xiumi-remote";
+        localized.meta.localizedImageCount = expected.length;
+        localized.meta.localizedAt = new Date().toISOString();
+        loadValue(localized, "秀米图片回传", { localized: true });
+      } catch (error) { setStatus(`图片回传处理失败：${error.message}`, "bad"); }
+    }
+    function downloadDocument() {
+      if (!state.document || !state.stats || !state.stats.saveReady) return;
+      const blob = new Blob([`${JSON.stringify(state.document, null, 2)}\n`], { type: "application/json;charset=utf-8" });
+      const href = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const stem = (state.document.meta.title || "xiumi").replace(/[\\/:*?"<>|]+/g, "-").trim() || "xiumi";
+      anchor.href = href; anchor.download = `${stem}.save-ready.xiumi.json`; anchor.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+      toast("保存版 JSON 已下载");
+    }
     async function copyFromButton() {
-      if (!state.document) return;
+      if (!state.document || !state.stats || !state.stats.saveReady) return setStatus("图片尚未持久化，不能复制保存版。", "bad");
       if (!state.copyEndpoint) {
         setStatus("在线页面受浏览器安全限制：现在请在本页按 Ctrl+C，随后到秀米按 Ctrl+V。", "good");
         toast("请按 Ctrl+C 完成原生复制");
@@ -232,7 +372,9 @@
       nodes.copy.disabled = true;
       setStatus("正在通过本机桥接写入原生剪切板……");
       try {
-        const response = await fetch(state.copyEndpoint, { method: "POST", cache: "no-store" });
+        const response = await fetch(state.copyEndpoint, {
+          method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify(state.document)
+        });
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
         setStatus(`已通过本机桥接写入 Chromium 原生剪切板（${result.bytes} bytes）。\n现在去秀米按 Ctrl+V。`, "good");
@@ -249,8 +391,11 @@
     nodes.drop.addEventListener("drop", event => { event.preventDefault(); nodes.drop.classList.remove("drag"); loadFile(event.dataTransfer.files[0]); });
     nodes.demo.addEventListener("click", () => loadURL("examples/demo.xiumi.json").catch(error => setStatus(error.message, "bad")));
     nodes.clear.addEventListener("click", () => clearDocument());
+    nodes.localize.addEventListener("click", beginLocalization);
+    nodes.download.addEventListener("click", downloadDocument);
     nodes.copy.addEventListener("click", copyFromButton);
     document.addEventListener("copy", onCopy);
+    document.addEventListener("paste", onPaste);
     const source = query.get("src");
     if (source) loadURL(source).catch(error => setStatus(`自动载入失败：${error.message}`, "bad"));
   })();

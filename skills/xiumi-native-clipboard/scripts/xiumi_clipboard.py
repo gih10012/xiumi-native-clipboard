@@ -57,7 +57,7 @@ def _walk(value: Any):
             yield from _walk(child)
 
 
-def validate_document(document: dict[str, Any], *, allow_remote_images: bool = False) -> dict[str, int]:
+def validate_document(document: dict[str, Any], *, require_save_ready: bool = False) -> dict[str, int | bool]:
     errors: list[str] = []
     warnings: list[str] = []
     if document.get("format") != "xiumi-native-clipboard":
@@ -104,6 +104,8 @@ def validate_document(document: dict[str, Any], *, allow_remote_images: bool = F
 
     uuids: set[str] = set()
     image_count = 0
+    embedded_image_count = 0
+    remote_image_count = 0
     component_count = 0
     for node in _walk(slices):
         comp = node.get("_comp")
@@ -122,17 +124,28 @@ def validate_document(document: dict[str, Any], *, allow_remote_images: bool = F
             if not isinstance(src, str) or not src:
                 errors.append(f"image #{image_count} has no src")
             elif src.startswith("data:"):
-                if ";base64," not in src:
+                if not src.lower().startswith("data:image/"):
+                    errors.append(f"image #{image_count} data URI is not an image")
+                elif ";base64," not in src:
                     errors.append(f"image #{image_count} data URI is not base64 encoded")
                 else:
                     try:
                         base64.b64decode(src.split(",", 1)[1], validate=True)
+                        embedded_image_count += 1
                     except (binascii.Error, ValueError):
                         errors.append(f"image #{image_count} has invalid base64 data")
-            elif not allow_remote_images:
-                errors.append(f"image #{image_count} is not embedded as a data URI")
+            elif src.startswith(("https://", "http://", "//")):
+                remote_image_count += 1
             else:
-                warnings.append(f"image #{image_count} uses a remote source")
+                errors.append(f"image #{image_count} is neither an embedded data URI nor a remote URL")
+    if embedded_image_count:
+        warnings.append(
+            f"document contains {embedded_image_count} embedded draft images; localize them in Xiumi before final copy"
+        )
+        if require_save_ready:
+            errors.append(
+                f"document is not save-ready: {embedded_image_count} embedded images still need Xiumi localization"
+            )
     if image_count > 60:
         warnings.append(f"document contains {image_count} images; clipboard size may be large")
     if errors:
@@ -142,6 +155,9 @@ def validate_document(document: dict[str, Any], *, allow_remote_images: bool = F
         "slices": len(slices),
         "components": component_count,
         "images": image_count,
+        "embedded_images": embedded_image_count,
+        "remote_images": remote_image_count,
+        "save_ready": embedded_image_count == 0,
         "warnings": len(warnings),
     }
 
@@ -284,7 +300,23 @@ def serve_document(document_path: Path, port: int, open_browser: bool) -> None:
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
             try:
-                blob = pack_custom(materialize_formats(document))
+                length_text = self.headers.get("Content-Length", "0")
+                try:
+                    content_length = int(length_text)
+                except ValueError as exc:
+                    raise DocumentError("invalid Content-Length") from exc
+                if content_length < 0 or content_length > MAX_DOCUMENT_BYTES:
+                    raise DocumentError(f"request document exceeds {MAX_DOCUMENT_BYTES} byte limit")
+                current_document = document
+                if content_length:
+                    try:
+                        current_document = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                        raise DocumentError(f"request body is not valid JSON: {exc}") from exc
+                    if not isinstance(current_document, dict):
+                        raise DocumentError("request document root must be an object")
+                validate_document(current_document, require_save_ready=True)
+                blob = pack_custom(materialize_formats(current_document))
                 previous = getattr(self.server, "clipboard_process", None)
                 if previous and previous.poll() is None:
                     previous.terminate()
@@ -298,7 +330,15 @@ def serve_document(document_path: Path, port: int, open_browser: bool) -> None:
                     json.dumps({"ok": True, "bytes": len(blob)}, ensure_ascii=False).encode("utf-8"),
                     "application/json; charset=utf-8",
                 )
-            except (DocumentError, OSError) as exc:
+            except DocumentError as exc:
+                payload = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode("utf-8")
+                self.send_response(HTTPStatus.UNPROCESSABLE_ENTITY)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(payload)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(payload)
+            except OSError as exc:
                 payload = json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False).encode("utf-8")
                 self.send_response(HTTPStatus.NOT_IMPLEMENTED)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -343,11 +383,17 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     validate = subparsers.add_parser("validate", help="validate a .xiumi.json document")
     validate.add_argument("file", type=Path)
-    validate.add_argument("--allow-remote-images", action="store_true")
+    validate.add_argument("--save-ready", action="store_true", help="reject embedded draft images")
+    validate.add_argument("--allow-remote-images", action="store_true", help=argparse.SUPPRESS)
     pack = subparsers.add_parser("pack", help="pack JSON into Chromium DataTransfer custom binary")
     pack.add_argument("file", type=Path)
     pack.add_argument("-o", "--output", required=True, type=Path)
     pack.add_argument("--timestamp", help="fixed timestamp for reproducible tests")
+    pack.add_argument(
+        "--allow-embedded-draft",
+        action="store_true",
+        help="diagnostic override; packed image drafts may paste but cannot be saved in Xiumi",
+    )
     unpack = subparsers.add_parser("unpack", help="unpack Chromium custom binary into JSON")
     unpack.add_argument("file", type=Path)
     unpack.add_argument("-o", "--output", required=True, type=Path)
@@ -364,18 +410,18 @@ def main() -> int:
     try:
         if args.command == "validate":
             document = load_json(args.file)
-            stats = validate_document(document, allow_remote_images=args.allow_remote_images)
+            stats = validate_document(document, require_save_ready=args.save_ready)
             print("valid " + " ".join(f"{key}={value}" for key, value in stats.items()))
         elif args.command == "pack":
             document = load_json(args.file)
-            validate_document(document)
+            validate_document(document, require_save_ready=not args.allow_embedded_draft)
             blob = pack_custom(materialize_formats(document, args.timestamp))
             args.output.write_bytes(blob)
             print(f"packed bytes={len(blob)} output={args.output}")
         elif args.command == "unpack":
             entries = unpack_custom(args.file.read_bytes())
             document = document_from_entries(entries, args.title)
-            validate_document(document, allow_remote_images=True)
+            validate_document(document)
             write_json(args.output, document)
             print(f"unpacked formats={len(entries)} output={args.output}")
         elif args.command == "serve":

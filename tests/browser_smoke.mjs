@@ -61,15 +61,24 @@ function countDocument(document) {
   if (!format) fail(`missing ${COMPS_MIME}`);
   let components = 0;
   let images = 0;
+  let embedded = 0;
+  let remote = 0;
+  const uniqueEmbedded = new Set();
   const visit = value => {
     if (Array.isArray(value)) return value.forEach(visit);
     if (!value || typeof value !== "object") return;
     if (value._comp) components += 1;
-    if (value.type === "image") images += 1;
+    if (value.type === "image") {
+      images += 1;
+      if (typeof value.src === "string" && value.src.startsWith("data:image/")) {
+        embedded += 1;
+        uniqueEmbedded.add(value.src);
+      } else if (typeof value.src === "string" && /^(?:https?:)?\/\//.test(value.src)) remote += 1;
+    }
     Object.values(value).forEach(visit);
   };
   visit(format.data.slices);
-  return { title: document.meta.title, slices: format.data.slices.length, components, images };
+  return { title: document.meta.title, slices: format.data.slices.length, components, images, embedded, remote, uniqueEmbedded: uniqueEmbedded.size };
 }
 async function devtoolsPage(port, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
@@ -117,6 +126,33 @@ async function stop(child) {
   await Promise.race([new Promise(resolve => child.once("exit", resolve)), delay(3000)]);
   if (child.exitCode === null) child.kill("SIGKILL");
 }
+async function trustedCopy(cdp) {
+  await cdp.send("Runtime.evaluate", {
+    returnByValue: true,
+    expression: `(()=>{
+      window.__copyProbe=null;
+      document.addEventListener("copy",event=>{window.__copyProbe={trusted:event.isTrusted,types:[...event.clipboardData.types]}},{once:true});
+      document.body.tabIndex=-1;
+      document.body.focus();
+      const range=document.createRange();
+      range.selectNodeContents(document.getElementById("documentTitle"));
+      const selection=getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    })()`,
+  });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await cdp.send("Page.bringToFront");
+    await cdp.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Control", code: "ControlLeft", windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 37, modifiers: 2 });
+    await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "c", code: "KeyC", windowsVirtualKeyCode: 67, nativeVirtualKeyCode: 54, modifiers: 2, commands: ["Copy"] });
+    await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "c", code: "KeyC", windowsVirtualKeyCode: 67, nativeVirtualKeyCode: 54, modifiers: 2 });
+    await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Control", code: "ControlLeft", windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 37, modifiers: 0 });
+    await delay(120);
+    const probe = await cdp.send("Runtime.evaluate", { returnByValue: true, expression: "window.__copyProbe" });
+    if (probe.result.value) return probe.result.value;
+  }
+  return null;
+}
 
 const document = JSON.parse(await readFile(documentPath, "utf8"));
 const expected = countDocument(document);
@@ -160,7 +196,7 @@ try {
   await cdp.send("Page.bringToFront");
   await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true });
   const expectedJSON = JSON.stringify(expected);
-  await cdp.send("Runtime.evaluate", {
+  const initialEvaluation = await cdp.send("Runtime.evaluate", {
     userGesture: true,
     awaitPromise: true,
     returnByValue: true,
@@ -175,41 +211,74 @@ try {
         slices:Number(document.getElementById("sliceCount").textContent),
         components:Number(document.getElementById("componentCount").textContent),
         imageStat:Number(document.getElementById("imageCount").textContent),
+        embeddedStat:Number(document.getElementById("embeddedCount").textContent),
+        remoteStat:Number(document.getElementById("remoteCount").textContent),
         imageDom:images.length,
-        imageDecoded:images.filter(image=>image.complete&&image.naturalWidth>0).length
+        imageDecoded:images.filter(image=>image.complete&&image.naturalWidth>0).length,
+        copyDisabled:document.getElementById("copyButton").disabled,
+        localizeHidden:document.getElementById("localizeButton").hidden
       };
-      document.addEventListener("copy",event=>{window.__copyProbe={trusted:event.isTrusted,types:[...event.clipboardData.types]}},{once:true});
-      document.body.tabIndex=-1;
-      document.body.focus();
-      const range=document.createRange();
-      range.selectNodeContents(document.getElementById("documentTitle"));
-      const selection=getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
       return window.__smokeStats;
     })()`,
   });
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await cdp.send("Page.bringToFront");
-    await cdp.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Control", code: "ControlLeft", windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 37, modifiers: 2 });
-    await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "c", code: "KeyC", windowsVirtualKeyCode: 67, nativeVirtualKeyCode: 54, modifiers: 2, commands: ["Copy"] });
-    await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "c", code: "KeyC", windowsVirtualKeyCode: 67, nativeVirtualKeyCode: 54, modifiers: 2 });
-    await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Control", code: "ControlLeft", windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 37, modifiers: 0 });
-    await delay(120);
-    const probe = await cdp.send("Runtime.evaluate", { returnByValue: true, expression: "window.__copyProbe" });
-    if (probe.result.value) break;
+  const initial = initialEvaluation.result.value;
+  for (const key of ["title", "slices", "components"]) if (initial[key] !== expected[key]) fail(`${key}: expected ${expected[key]}, got ${initial[key]}`);
+  if (initial.imageStat !== expected.images || initial.imageDom !== expected.images) fail(`initial image count mismatch: ${JSON.stringify(initial)}`);
+  if (initial.embeddedStat !== expected.embedded || initial.remoteStat !== expected.remote) fail(`initial image persistence mismatch: ${JSON.stringify(initial)}`);
+  if (expected.embedded && (!initial.copyDisabled || initial.localizeHidden)) fail(`embedded draft was not blocked: ${JSON.stringify(initial)}`);
+  if (!expected.embedded && initial.copyDisabled) fail(`save-ready document copy is disabled: ${JSON.stringify(initial)}`);
+
+  let uploadProbe = null;
+  if (expected.embedded) {
+    await cdp.send("Runtime.evaluate", { userGesture: true, expression: 'document.getElementById("localizeButton").click()' });
+    uploadProbe = await trustedCopy(cdp);
+    if (!uploadProbe?.trusted) fail(`expected a trusted upload-sheet copy, got ${JSON.stringify(uploadProbe)}`);
+    for (const mime of ["text/html", "text/plain"]) if (!uploadProbe.types.includes(mime)) fail(`upload sheet is missing ${mime}`);
+    if (uploadProbe.types.includes(COMPS_MIME) || uploadProbe.types.includes(LABEL_MIME)) fail(`upload sheet leaked Xiumi native MIME: ${JSON.stringify(uploadProbe)}`);
+
+    const remoteSources = Array.from({ length: expected.uniqueEmbedded }, (_, index) => `https://assets.example.test/xiumi-localized-${index + 1}.png`);
+    const pasteResult = await cdp.send("Runtime.evaluate", {
+      userGesture: true,
+      returnByValue: true,
+      expression: `(()=>{
+        const sources=${JSON.stringify(remoteSources)};
+        const transfer=new DataTransfer();
+        transfer.setData(${JSON.stringify(COMPS_MIME)},JSON.stringify({slices:sources.map(src=>({img1:{type:"image",src}}))}));
+        const pasted=document.dispatchEvent(new ClipboardEvent("paste",{clipboardData:transfer,bubbles:true,cancelable:true}));
+        return {
+          pasted,
+          embedded:Number(document.getElementById("embeddedCount").textContent),
+          remote:Number(document.getElementById("remoteCount").textContent),
+          copyDisabled:document.getElementById("copyButton").disabled,
+          downloadHidden:document.getElementById("downloadButton").hidden,
+          status:document.getElementById("status").textContent
+        };
+      })()`,
+    });
+    const localized = pasteResult.result.value;
+    if (localized.embedded !== 0 || localized.remote !== expected.remote + expected.embedded) fail(`localization failed: ${JSON.stringify(localized)}`);
+    if (localized.copyDisabled || localized.downloadHidden || !localized.status.includes("保存就绪")) fail(`localized document was not unlocked: ${JSON.stringify(localized)}`);
   }
+  const finalProbe = await trustedCopy(cdp);
   const evaluation = await cdp.send("Runtime.evaluate", {
     returnByValue: true,
-    expression: `({copyProbe:window.__copyProbe,status:document.getElementById("status").textContent,...window.__smokeStats})`,
+    expression: `({
+      status:document.getElementById("status").textContent,
+      title:document.getElementById("documentTitle").textContent,
+      slices:Number(document.getElementById("sliceCount").textContent),
+      components:Number(document.getElementById("componentCount").textContent),
+      imageStat:Number(document.getElementById("imageCount").textContent),
+      embeddedStat:Number(document.getElementById("embeddedCount").textContent),
+      remoteStat:Number(document.getElementById("remoteCount").textContent)
+    })`,
   });
   const actual = evaluation.result.value;
-  if (!actual.copyProbe?.trusted) fail(`expected a trusted copy event, got ${JSON.stringify(actual.copyProbe)}`);
-  for (const mime of [COMPS_MIME, LABEL_MIME, "text/plain"]) if (!actual.copyProbe.types.includes(mime)) fail(`copy event is missing ${mime}`);
+  if (!finalProbe?.trusted) fail(`expected a trusted final copy event, got ${JSON.stringify(finalProbe)}`);
+  for (const mime of [COMPS_MIME, LABEL_MIME, "text/plain"]) if (!finalProbe.types.includes(mime)) fail(`final copy event is missing ${mime}`);
   for (const key of ["title", "slices", "components"]) if (actual[key] !== expected[key]) fail(`${key}: expected ${expected[key]}, got ${actual[key]}`);
-  for (const key of ["imageStat", "imageDom", "imageDecoded"]) if (actual[key] !== expected.images) fail(`${key}: expected ${expected.images}, got ${actual[key]}`);
+  if (actual.imageStat !== expected.images || actual.embeddedStat !== 0 || actual.remoteStat !== expected.images) fail(`final persistence stats mismatch: ${JSON.stringify(actual)}`);
   if (!actual.status.includes("已写入 Chromium 原生剪切板")) fail(`unexpected status: ${actual.status}`);
-  console.log(JSON.stringify({ ok: true, url, expected, actual }, null, 2));
+  console.log(JSON.stringify({ ok: true, url, expected, initial, uploadProbe, finalProbe, actual }, null, 2));
 } finally {
   if (cdp) cdp.close();
   await stop(chrome);

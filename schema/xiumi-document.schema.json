@@ -15,7 +15,10 @@
         "title": {"type": "string", "minLength": 1},
         "previewWidth": {"type": "integer", "minimum": 280, "maximum": 1200},
         "createdAt": {"type": "string"},
-        "generator": {"type": "string"}
+        "generator": {"type": "string"},
+        "imagePersistence": {"enum": ["embedded-draft", "xiumi-remote"]},
+        "localizedImageCount": {"type": "integer", "minimum": 0},
+        "localizedAt": {"type": "string", "format": "date-time"}
       },
       "additionalProperties": true
     },

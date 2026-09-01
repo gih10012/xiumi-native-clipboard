@@ -43,7 +43,20 @@ Prefer the builders from `scripts/xiumi_components.py`:
 - `row2()` creates a true two-column native layout; nest rows for three or more visual columns.
 - Place a transparent `image()` after a card with a negative `marginTop` to create editable out-of-frame decoration.
 
-Every `_comp` needs a unique `_$uuid`. Use camelCase Xiumi style properties and strings with CSS units. Embed local PNG/JPEG/WebP/GIF/SVG files through `data_uri()`; a finished document must not depend on relative image paths.
+Every `_comp` needs a unique `_$uuid`. Use camelCase Xiumi style properties and strings with CSS units. Embed local PNG/JPEG/WebP/GIF/SVG files through `data_uri()` while authoring so the draft stays portable and does not depend on relative paths.
+
+## Image persistence states
+
+A Base64 `data:image/...;base64,...` source is draft transport, not final storage. When that source is copied inside `application/xiumi-comps`, Xiumi takes the native-component branch and bypasses its normal pasted-image upload step. The image can render immediately but the article may fail to save.
+
+A save-ready image source is a persistent HTTP(S) URL returned after Xiumi has accepted the image into the current account. Use the preview tool's two-stage workflow:
+
+1. Copy the temporary upload sheet as ordinary `text/html` only.
+2. Paste it into a blank Xiumi article and wait for all images to appear.
+3. Copy that temporary article in Xiumi and paste it back into the tool.
+4. The tool replaces every matching data URI in the original native components, preserving layout and repeated-image references.
+
+After localization, the tool records `meta.imagePersistence: "xiumi-remote"`, `meta.localizedImageCount`, and `meta.localizedAt`. These fields are informative; save-readiness is determined by the absence of embedded image data URIs. Never directly hand off or pack an image draft as a final article.
 
 The previewer supports the component subset above and renders unknown group-like components generically with a diagnostic warning. Only use additional proprietary templates after a real Xiumi paste test.
 
@@ -53,9 +66,10 @@ From the skill directory:
 
 ```bash
 python3 scripts/xiumi_clipboard.py validate ARTICLE.xiumi.json
+python3 scripts/xiumi_clipboard.py validate ARTICLE.save-ready.xiumi.json --save-ready
 python3 scripts/xiumi_clipboard.py pack ARTICLE.xiumi.json -o ARTICLE.bin
 python3 scripts/xiumi_clipboard.py unpack ARTICLE.bin -o ROUNDTRIP.xiumi.json
 python3 scripts/xiumi_clipboard.py serve ARTICLE.xiumi.json
 ```
 
-The server binds only to `127.0.0.1`, disables caching, and prints a URL whose `src` query has already selected that document. Its tokenized `copy` endpoint lets the page button write `chromium/x-web-custom-data` through `wl-copy` or `xclip`; when no supported helper is available, use a real `Ctrl+C` in desktop Chromium.
+The server binds only to `127.0.0.1`, disables caching, and prints a URL whose `src` query has already selected that document. Its tokenized `copy` endpoint accepts the current browser-side save-ready document and writes `chromium/x-web-custom-data` through `wl-copy` or `xclip`; it rejects documents that still contain embedded draft images. When no supported helper is available, use a real `Ctrl+C` in desktop Chromium.
