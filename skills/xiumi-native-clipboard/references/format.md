@@ -49,12 +49,13 @@ Every `_comp` needs a unique `_$uuid`. Use camelCase Xiumi style properties and 
 
 A Base64 `data:image/...;base64,...` source is draft transport, not final storage. When that source is copied inside `application/xiumi-comps`, Xiumi takes the native-component branch and bypasses its normal pasted-image upload step. The image can render immediately but the article may fail to save.
 
-A save-ready image source is a persistent HTTP(S) URL returned after Xiumi has accepted the image into the current account. Use the preview tool's two-stage workflow:
+A save-ready image source for native components is a persistent HTTP(S) URL returned after Xiumi has accepted the image into the current account. Use the preview tool's HTML-first workflow:
 
-1. Copy the temporary upload sheet as ordinary `text/html` only.
-2. Paste it into a blank Xiumi article and wait for all images to appear.
-3. Copy that temporary article in Xiumi and paste it back into the tool.
-4. The tool replaces every matching data URI in the original native components, preserving layout and repeated-image references.
+1. Copy the complete styled article as ordinary `text/html` plus `text/plain`, without Xiumi custom MIME.
+2. Paste it into Xiumi. Xiumi uploads the Base64 images, and this HTML version is already a valid final result.
+3. Only when native replacement is wanted, select and copy the imported Xiumi body and paste it back into the tool.
+4. The tool replaces matching data URIs in the original native components with the returned permanent URLs.
+5. Copy `xiumi-comps`, select the first-step Xiumi body, and paste to replace it.
 
 After localization, the tool records `meta.imagePersistence: "xiumi-remote"`, `meta.localizedImageCount`, and `meta.localizedAt`. These fields are informative; save-readiness is determined by the absence of embedded image data URIs. Never directly hand off or pack an image draft as a final article.
 

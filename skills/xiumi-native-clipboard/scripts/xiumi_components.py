@@ -28,7 +28,7 @@ def component_uuid(prefix: str = "comp") -> str:
 
 
 def data_uri(path: str | Path) -> str:
-    """Embed a local image for portable draft transport; localize it in Xiumi before final copy."""
+    """Embed a local image for HTML-first transport; localize it before optional native copy."""
     source = Path(path)
     mime = mimetypes.guess_type(source.name)[0] or "application/octet-stream"
     return f"data:{mime};base64," + base64.b64encode(source.read_bytes()).decode("ascii")

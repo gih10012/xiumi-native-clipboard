@@ -63,7 +63,6 @@ function countDocument(document) {
   let images = 0;
   let embedded = 0;
   let remote = 0;
-  const uniqueEmbedded = new Set();
   const visit = value => {
     if (Array.isArray(value)) return value.forEach(visit);
     if (!value || typeof value !== "object") return;
@@ -72,13 +71,12 @@ function countDocument(document) {
       images += 1;
       if (typeof value.src === "string" && value.src.startsWith("data:image/")) {
         embedded += 1;
-        uniqueEmbedded.add(value.src);
       } else if (typeof value.src === "string" && /^(?:https?:)?\/\//.test(value.src)) remote += 1;
     }
     Object.values(value).forEach(visit);
   };
   visit(format.data.slices);
-  return { title: document.meta.title, slices: format.data.slices.length, components, images, embedded, remote, uniqueEmbedded: uniqueEmbedded.size };
+  return { title: document.meta.title, slices: format.data.slices.length, components, images, embedded, remote };
 }
 async function devtoolsPage(port, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
@@ -131,7 +129,12 @@ async function trustedCopy(cdp) {
     returnByValue: true,
     expression: `(()=>{
       window.__copyProbe=null;
-      document.addEventListener("copy",event=>{window.__copyProbe={trusted:event.isTrusted,types:[...event.clipboardData.types]}},{once:true});
+      document.addEventListener("copy",event=>{
+        const html=event.clipboardData.getData("text/html");
+        const template=document.createElement("template");
+        template.innerHTML=html;
+        window.__copyProbe={trusted:event.isTrusted,types:[...event.clipboardData.types],htmlLength:html.length,htmlImages:template.content.querySelectorAll("img[src]").length};
+      },{once:true});
       document.body.tabIndex=-1;
       document.body.focus();
       const range=document.createRange();
@@ -216,7 +219,7 @@ try {
         imageDom:images.length,
         imageDecoded:images.filter(image=>image.complete&&image.naturalWidth>0).length,
         copyDisabled:document.getElementById("copyButton").disabled,
-        localizeHidden:document.getElementById("localizeButton").hidden
+        htmlCopyHidden:document.getElementById("htmlCopyButton").hidden
       };
       return window.__smokeStats;
     })()`,
@@ -225,18 +228,19 @@ try {
   for (const key of ["title", "slices", "components"]) if (initial[key] !== expected[key]) fail(`${key}: expected ${expected[key]}, got ${initial[key]}`);
   if (initial.imageStat !== expected.images || initial.imageDom !== expected.images) fail(`initial image count mismatch: ${JSON.stringify(initial)}`);
   if (initial.embeddedStat !== expected.embedded || initial.remoteStat !== expected.remote) fail(`initial image persistence mismatch: ${JSON.stringify(initial)}`);
-  if (expected.embedded && (!initial.copyDisabled || initial.localizeHidden)) fail(`embedded draft was not blocked: ${JSON.stringify(initial)}`);
+  if (initial.htmlCopyHidden) fail(`step 1 HTML action is hidden: ${JSON.stringify(initial)}`);
+  if (expected.embedded && !initial.copyDisabled) fail(`step 2 should be locked before image return: ${JSON.stringify(initial)}`);
   if (!expected.embedded && initial.copyDisabled) fail(`save-ready document copy is disabled: ${JSON.stringify(initial)}`);
 
-  let uploadProbe = null;
-  if (expected.embedded) {
-    await cdp.send("Runtime.evaluate", { userGesture: true, expression: 'document.getElementById("localizeButton").click()' });
-    uploadProbe = await trustedCopy(cdp);
-    if (!uploadProbe?.trusted) fail(`expected a trusted upload-sheet copy, got ${JSON.stringify(uploadProbe)}`);
-    for (const mime of ["text/html", "text/plain"]) if (!uploadProbe.types.includes(mime)) fail(`upload sheet is missing ${mime}`);
-    if (uploadProbe.types.includes(COMPS_MIME) || uploadProbe.types.includes(LABEL_MIME)) fail(`upload sheet leaked Xiumi native MIME: ${JSON.stringify(uploadProbe)}`);
+  await cdp.send("Runtime.evaluate", { userGesture: true, expression: 'document.getElementById("htmlCopyButton").click()' });
+  const htmlProbe = await trustedCopy(cdp);
+  if (!htmlProbe?.trusted) fail(`expected a trusted full-HTML copy, got ${JSON.stringify(htmlProbe)}`);
+  for (const mime of ["text/html", "text/plain"]) if (!htmlProbe.types.includes(mime)) fail(`full HTML is missing ${mime}`);
+  if (htmlProbe.types.includes(COMPS_MIME) || htmlProbe.types.includes(LABEL_MIME)) fail(`full HTML leaked Xiumi native MIME: ${JSON.stringify(htmlProbe)}`);
+  if (htmlProbe.htmlImages !== expected.images || htmlProbe.htmlLength < 100) fail(`full HTML did not contain the complete article: ${JSON.stringify(htmlProbe)}`);
 
-    const remoteSources = Array.from({ length: expected.uniqueEmbedded }, (_, index) => `https://assets.example.test/xiumi-localized-${index + 1}.png`);
+  if (expected.embedded) {
+    const remoteSources = Array.from({ length: expected.images }, (_, index) => `https://assets.example.test/xiumi-localized-${index + 1}.png`);
     const pasteResult = await cdp.send("Runtime.evaluate", {
       userGesture: true,
       returnByValue: true,
@@ -257,7 +261,7 @@ try {
     });
     const localized = pasteResult.result.value;
     if (localized.embedded !== 0 || localized.remote !== expected.remote + expected.embedded) fail(`localization failed: ${JSON.stringify(localized)}`);
-    if (localized.copyDisabled || localized.downloadHidden || !localized.status.includes("保存就绪")) fail(`localized document was not unlocked: ${JSON.stringify(localized)}`);
+    if (localized.copyDisabled || localized.downloadHidden || !localized.status.includes("②已解锁")) fail(`localized document was not unlocked: ${JSON.stringify(localized)}`);
   }
   const finalProbe = await trustedCopy(cdp);
   const evaluation = await cdp.send("Runtime.evaluate", {
@@ -277,8 +281,8 @@ try {
   for (const mime of [COMPS_MIME, LABEL_MIME, "text/plain"]) if (!finalProbe.types.includes(mime)) fail(`final copy event is missing ${mime}`);
   for (const key of ["title", "slices", "components"]) if (actual[key] !== expected[key]) fail(`${key}: expected ${expected[key]}, got ${actual[key]}`);
   if (actual.imageStat !== expected.images || actual.embeddedStat !== 0 || actual.remoteStat !== expected.images) fail(`final persistence stats mismatch: ${JSON.stringify(actual)}`);
-  if (!actual.status.includes("已写入 Chromium 原生剪切板")) fail(`unexpected status: ${actual.status}`);
-  console.log(JSON.stringify({ ok: true, url, expected, initial, uploadProbe, finalProbe, actual }, null, 2));
+  if (!actual.status.includes("xiumi-comps 已写入 Chromium")) fail(`unexpected status: ${actual.status}`);
+  console.log(JSON.stringify({ ok: true, url, expected, initial, htmlProbe, finalProbe, actual }, null, 2));
 } finally {
   if (cdp) cdp.close();
   await stop(chrome);
