@@ -134,6 +134,8 @@ async function trustedCopy(cdp) {
         const template=document.createElement("template");
         template.innerHTML=html;
         const topBlocks=[...template.content.children];
+        const xiumiBase64=/^data:image\\/(gif|png|jpeg|bmp|webp|svg)(?:;charset=utf-8)?;base64,(?:[A-Za-z0-9]|[+\\/])+={0,2}/gim;
+        const xiumiClassified=[...template.content.querySelectorAll("img[src]")].filter(image=>xiumiBase64.test((image.getAttribute("src")||"").slice(0,256)));
         window.__copyProbe={
           trusted:event.isTrusted,
           types:[...event.clipboardData.types],
@@ -141,7 +143,9 @@ async function trustedCopy(cdp) {
           htmlImages:template.content.querySelectorAll("img[src]").length,
           htmlTopBlocks:topBlocks.length,
           htmlMixedBlocks:topBlocks.filter(block=>block.querySelector("img[src]")&&block.textContent.trim()).length,
-          htmlSpacers:topBlocks.filter(block=>block.hasAttribute("data-xiumi-skip-spacer")&&block.querySelector("br")&&!block.querySelector("img[src]")).length,
+          htmlSkipImages:topBlocks.filter(block=>block.hasAttribute("data-xiumi-skip-block")&&block.querySelector("img[data-xiumi-skip-image]")).length,
+          xiumiClassifiedReal:xiumiClassified.filter(image=>!image.hasAttribute("data-xiumi-skip-image")).length,
+          xiumiClassifiedSkip:xiumiClassified.filter(image=>image.hasAttribute("data-xiumi-skip-image")).length,
           htmlText:template.content.textContent.replace(/\u200b/g,"").trim()
         };
       },{once:true});
@@ -249,8 +253,9 @@ try {
     if (!uploadProbe?.trusted) fail(`expected a trusted image-sheet copy, got ${JSON.stringify(uploadProbe)}`);
     for (const mime of ["text/html", "text/plain"]) if (!uploadProbe.types.includes(mime)) fail(`image sheet is missing ${mime}`);
     if (uploadProbe.types.includes(COMPS_MIME) || uploadProbe.types.includes(LABEL_MIME)) fail(`image sheet leaked Xiumi native MIME: ${JSON.stringify(uploadProbe)}`);
-    if (uploadProbe.htmlImages !== expected.images || uploadProbe.htmlLength < 100) fail(`image sheet did not contain every image: ${JSON.stringify(uploadProbe)}`);
-    if (uploadProbe.htmlMixedBlocks !== 0 || uploadProbe.htmlTopBlocks !== expected.images * 2 - 1 || uploadProbe.htmlSpacers !== expected.images - 1 || uploadProbe.htmlText) fail(`image sheet contains text or malformed anti-skip blocks: ${JSON.stringify(uploadProbe)}`);
+    if (uploadProbe.htmlImages !== expected.images + expected.embedded || uploadProbe.htmlLength < 100) fail(`image sheet did not contain every real and skip image: ${JSON.stringify(uploadProbe)}`);
+    if (uploadProbe.htmlMixedBlocks !== 0 || uploadProbe.htmlTopBlocks !== expected.images + expected.embedded || uploadProbe.htmlSkipImages !== expected.embedded || uploadProbe.htmlText) fail(`image sheet contains text or malformed anti-skip images: ${JSON.stringify(uploadProbe)}`);
+    if (uploadProbe.xiumiClassifiedReal !== expected.embedded || uploadProbe.xiumiClassifiedSkip !== 0) fail(`Xiumi stateful Base64 scan would still skip a real image: ${JSON.stringify(uploadProbe)}`);
   }
 
   if (expected.embedded) {
@@ -272,11 +277,12 @@ try {
     if (!pending.copyDisabled || !pending.status.includes("仍在串行上传图片")) fail(`incomplete image upload was not diagnosed: ${JSON.stringify(pending)}`);
 
     const remoteSources = Array.from({ length: expected.images }, (_, index) => `https://assets.example.test/xiumi-localized-${index + 1}.png`);
+    const returnedSources = remoteSources.flatMap((src, index) => [src, `data:image/png;base64,aGVsbG8=#xiumi-skip-${index + 1}`]);
     const pasteResult = await cdp.send("Runtime.evaluate", {
       userGesture: true,
       returnByValue: true,
       expression: `(()=>{
-        const sources=${JSON.stringify(remoteSources)};
+        const sources=${JSON.stringify(returnedSources)};
         const transfer=new DataTransfer();
         transfer.setData(${JSON.stringify(COMPS_MIME)},JSON.stringify({slices:sources.map(src=>({img1:{type:"image",src}}))}));
         const pasted=document.dispatchEvent(new ClipboardEvent("paste",{clipboardData:transfer,bubbles:true,cancelable:true}));

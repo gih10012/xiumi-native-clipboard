@@ -10,7 +10,22 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  unit:
+    name: Unit · ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests -v
+
+  browser-smoke:
+    name: Chromium clipboard smoke · Linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +35,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: python3 -m unittest discover -s tests -v
       - run: sudo apt-get update
       - run: sudo apt-get install --no-install-recommends -y xvfb xauth
       - run: xvfb-run -a env BROWSER_SMOKE_HEADED=1 node tests/browser_smoke.mjs examples/demo.xiumi.json

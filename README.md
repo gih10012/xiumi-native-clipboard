@@ -21,7 +21,7 @@
 python3 skills/xiumi-native-clipboard/scripts/xiumi_clipboard.py serve ARTICLE.xiumi.json
 ```
 
-命令会打印形如 `http://127.0.0.1:PORT/?src=...&copy=...` 的地址。这个本机网址会自动载入稿件；②解锁后，本地按钮可通过 `wl-copy` 或 `xclip` 写入 Chromium 私有剪切板。①仍需在浏览器页面中用真实 `Ctrl+C` 复制。服务仅监听本机回环地址，不会上传或缓存稿件。
+命令会打印形如 `http://127.0.0.1:PORT/?src=...&copy=...` 的地址。这个本机网址会自动载入稿件。Linux 下，②解锁后本地按钮可通过 `wl-copy` 或 `xclip` 写入 Chromium 私有剪切板；Windows 和 macOS 会自动回退为页面内真实 `Ctrl+C`。①在三端都需使用页面内真实复制。服务仅监听本机回环地址，不会上传或缓存稿件。
 
 ## CLI
 
@@ -46,17 +46,34 @@ python3 skills/xiumi-native-clipboard/scripts/xiumi_clipboard.py unpack ARTICLE.
 
 ## 安装 Codex Skill
 
-克隆仓库后，将技能目录链接到 Codex 的技能目录：
+最省事的方式是让另一个 Codex 使用内置的 `skill-installer`，从仓库子目录 `skills/xiumi-native-clipboard` 安装。手动安装时，macOS/Linux 可克隆后建立链接：
 
 ```bash
 ln -s "$(pwd)/skills/xiumi-native-clipboard" ~/.codex/skills/xiumi-native-clipboard
+```
+
+Windows PowerShell 可复制技能目录：
+
+```powershell
+git clone https://github.com/gih10012/xiumi-native-clipboard.git
+New-Item -ItemType Directory -Force "$HOME\.codex\skills" | Out-Null
+Copy-Item -Recurse -Force ".\xiumi-native-clipboard\skills\xiumi-native-clipboard" "$HOME\.codex\skills\xiumi-native-clipboard"
 ```
 
 之后可直接要求 Codex 生成秀米原生 JSON 并提供已预载的本机预览网址。真实文章、Base64 图片和秀米 UID 不应提交到公共仓库。
 
 ## 兼容性
 
-①只写入 `text/html` 与 `text/plain`：HTML 是无文字上传单，不包含正式稿的任何文字或布局。实测秀米会在一串相邻顶层图片中稳定漏掉偶数序号，因此工具在每两张真实图片之间插入一个空 `<p><br></p>` 占位，让秀米跳过空位而保留全部图片。②使用 Chromium DataTransfer 自定义格式；其中的图片地址已从临时图片稿回传为秀米永久地址，因此完整原生正文能够保存。本地服务的按钮为②提供等价的系统剪切板桥接。目标浏览器为桌面版 Edge/Chrome；Firefox 和 Safari 不在兼容范围内。
+①只写入 `text/html` 与 `text/plain`：HTML 是无文字上传单，不包含正式稿的任何文字或布局。秀米当前的 Base64 图片扫描会稳定出现一次成功、一次失败的交替结果，因此工具让每张 Base64 真实图片后面跟随一个唯一的透明图片标记，由标记承担失败；回传时再自动剔除标记。②使用 Chromium DataTransfer 自定义格式；其中的真实图片地址已从临时图片稿回传为秀米永久地址，因此完整原生正文能够保存。本地服务的按钮为②提供等价的系统剪切板桥接。目标浏览器为桌面版 Edge/Chrome；Firefox 和 Safari 不在兼容范围内。
+
+| 环境 | 在线工具 / 页面内 `Ctrl+C` | 本地②一键桥接 |
+| --- | --- | --- |
+| Windows 10/11 + Edge/Chrome | 支持 | 自动回退为页面内 `Ctrl+C` |
+| macOS + Edge/Chrome | 支持 | 自动回退为页面内 `Ctrl+C` |
+| Linux Wayland/X11 + Edge/Chrome/Chromium | 支持 | 安装 `wl-copy` 或 `xclip` 后支持 |
+| Android、iOS、Firefox、Safari | 不支持 | 不支持 |
+
+因此它支持三大桌面系统，但不是所有浏览器和移动平台通用。Python 的校验、打包、反解和本地预览服务在 Windows、macOS、Linux CI 中测试；真实 Chromium 私有剪切板冒烟测试目前在 Linux CI 中运行。
 
 ## 开发验证
 

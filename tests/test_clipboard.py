@@ -111,7 +111,7 @@ class StaticToolTests(unittest.TestCase):
         self.assertIn("event.clipboardData.setData(format.mime", html)
         self.assertIn('event.clipboardData.setData("text/html", uploadSheet', html)
         self.assertIn("function uploadSheet(sources)", html)
-        self.assertIn("data-xiumi-skip-spacer", html)
+        self.assertIn("data-xiumi-skip-image", html)
         self.assertNotIn("fullStyledHTML", html)
         self.assertIn("document.addEventListener(\"copy\", onCopy)", html)
         self.assertIn("document.addEventListener(\"paste\", onPaste)", html)

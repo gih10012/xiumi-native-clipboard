@@ -55,6 +55,7 @@
     const COMPS_MIME = "application/xiumi-comps; category=paper.comp";
     const LABEL_MIME = "application/xiumi-label; origin=studio";
     const MAX_BYTES = 80 * 1024 * 1024;
+    const SKIP_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
     const query = new URLSearchParams(location.search);
     const state = {
       document: null,
@@ -298,11 +299,17 @@
         image.src = src;
         image.alt = "";
         paragraph.append(image);
-        if (index === sources.length - 1) return paragraph.outerHTML;
-        const spacer = document.createElement("p");
-        spacer.setAttribute("data-xiumi-skip-spacer", String(index + 1));
-        spacer.append(document.createElement("br"));
-        return paragraph.outerHTML + spacer.outerHTML;
+        if (!isEmbeddedImage(src)) return paragraph.outerHTML;
+        const skipParagraph = document.createElement("p");
+        skipParagraph.setAttribute("data-xiumi-skip-block", String(index + 1));
+        skipParagraph.style.cssText = "margin:0;height:0;line-height:0;overflow:hidden;";
+        const skipImage = document.createElement("img");
+        skipImage.src = `${SKIP_IMAGE}#xiumi-skip-${index + 1}`;
+        skipImage.alt = "";
+        skipImage.setAttribute("data-xiumi-skip-image", String(index + 1));
+        skipImage.style.cssText = "display:block;width:1px;height:1px;opacity:0;";
+        skipParagraph.append(skipImage);
+        return paragraph.outerHTML + skipParagraph.outerHTML;
       }).join("");
     }
     function beginImageUpload() {
@@ -310,7 +317,7 @@
       const sources = imageSources(state.stats.comps);
       state.copyMode = "upload-sheet";
       state.localization = { sources, awaitingReturn: false };
-      setStatus(`① 已准备：剪切板中只放 ${sources.length} 张图片；图片之间加入了防止秀米隔张漏图的空占位，不含标题或正文。\n现在请在本页真实按 Ctrl+C，再粘贴到空白秀米临时稿。`, "good");
+      setStatus(`① 已准备：${sources.length} 张真实图片之间插入了透明传输标记，用来吸收秀米隔张失败的问题；不含标题或正文。\n现在请在本页真实按 Ctrl+C，再粘贴到空白秀米临时稿。`, "good");
       toast("下一步：在本页按 Ctrl+C");
       document.body.focus();
     }
@@ -344,8 +351,11 @@
     function onPaste(event) {
       if (!state.document || !state.localization || !state.localization.awaitingReturn || !event.clipboardData) return;
       try {
-        const returned = imageEntriesFromClipboard(event.clipboardData);
+        const received = imageEntriesFromClipboard(event.clipboardData);
         const expected = state.localization.sources;
+        const markedCount = received.filter(entry => entry.src.includes("#xiumi-skip-")).length;
+        let returned = markedCount ? received.filter(entry => !entry.src.includes("#xiumi-skip-")) : received;
+        if (!markedCount && state.stats.embeddedImageCount === expected.length && [expected.length * 2 - 1, expected.length * 2].includes(received.length)) returned = received.filter((_, index) => index % 2 === 0);
         const remoteCount = returned.filter(entry => entry.kind === "remote").length;
         const embeddedCount = returned.filter(entry => entry.kind === "embedded").length;
         if (returned.length === expected.length && embeddedCount) {
@@ -353,7 +363,7 @@
           return;
         }
         if (returned.length !== expected.length) {
-          setStatus(`这次只收到临时稿中的 ${returned.length}/${expected.length} 张图片（其中 ${remoteCount} 张已有永久地址）。\n请回秀米等待全部上传结束，再使用秀米的“复制全文”，不要手动只选中可见区域。`, "bad");
+          setStatus(`这次从临时稿识别到 ${returned.length}/${expected.length} 张真实图片（剪切板共 ${received.length} 个图片节点，其中 ${markedCount} 个是透明传输标记；${remoteCount} 张已有永久地址）。\n请回秀米等待全部上传结束，再使用秀米的“复制全文”。`, "bad");
           return;
         }
         if (remoteCount !== expected.length) {
