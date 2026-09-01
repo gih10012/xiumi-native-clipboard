@@ -49,15 +49,15 @@ Every `_comp` needs a unique `_$uuid`. Use camelCase Xiumi style properties and 
 
 A Base64 `data:image/...;base64,...` source is draft transport, not final storage. When that source is copied inside `application/xiumi-comps`, Xiumi takes the native-component branch and bypasses its normal pasted-image upload step. The image can render immediately but the article may fail to save.
 
-A save-ready image source for native components is a persistent HTTP(S) URL returned after Xiumi has accepted the image into the current account. Use the preview tool's HTML-first workflow:
+A save-ready image source for native components is a persistent HTTP(S) URL returned after Xiumi has accepted the image into the current account. Use the preview tool's image-localization workflow:
 
-1. Copy all content as ordinary `text/html` plus `text/plain`, without Xiumi custom MIME. Emit each top-level block as text-only or image-only; a top-level node with both text and nested images makes Xiumi choose its text conversion branch and drop those images.
-2. Paste it into Xiumi. Xiumi uploads the Base64 images, and this HTML version is already a valid final result.
-3. Only when native replacement is wanted, select and copy the imported Xiumi body and paste it back into the tool.
+1. Copy only the images as ordinary `text/html` plus an empty/invisible `text/plain` fallback, without Xiumi custom MIME. Emit exactly one image-only top-level block for every image occurrence. Do not include article text, headings, cards, rows, or decorative layout in this pass.
+2. Paste the sheet into a blank temporary Xiumi article and wait for every Base64 image upload to finish.
+3. Use Xiumi's “复制全文” and paste it back into the tool. Do not rely on a manual visible-area selection.
 4. The tool replaces matching data URIs in the original native components with the returned permanent URLs.
-5. Copy `xiumi-comps`, select the first-step Xiumi body, and paste to replace it.
+5. Copy `xiumi-comps` and paste into a blank final Xiumi article to generate the full native layout.
 
-After localization, the tool records `meta.imagePersistence: "xiumi-remote"`, `meta.localizedImageCount`, and `meta.localizedAt`. These fields are informative; save-readiness is determined by the absence of embedded image data URIs. Never directly hand off or pack an image draft as a final article.
+After localization, the tool records `meta.imagePersistence: "xiumi-remote"`, `meta.localizedImageCount`, and `meta.localizedAt`. These fields are informative; save-readiness is determined by the absence of embedded image data URIs. The image-only first pass is disposable and is never the final article. Never directly hand off or pack an embedded-image draft as a final article.
 
 The previewer supports the component subset above and renders unknown group-like components generically with a diagnostic warning. Only use additional proprietary templates after a real Xiumi paste test.
 

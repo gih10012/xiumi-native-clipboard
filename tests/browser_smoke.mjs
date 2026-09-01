@@ -140,7 +140,8 @@ async function trustedCopy(cdp) {
           htmlLength:html.length,
           htmlImages:template.content.querySelectorAll("img[src]").length,
           htmlTopBlocks:topBlocks.length,
-          htmlMixedBlocks:topBlocks.filter(block=>block.querySelector("img[src]")&&block.textContent.trim()).length
+          htmlMixedBlocks:topBlocks.filter(block=>block.querySelector("img[src]")&&block.textContent.trim()).length,
+          htmlText:template.content.textContent.replace(/\u200b/g,"").trim()
         };
       },{once:true});
       document.body.tabIndex=-1;
@@ -227,7 +228,7 @@ try {
         imageDom:images.length,
         imageDecoded:images.filter(image=>image.complete&&image.naturalWidth>0).length,
         copyDisabled:document.getElementById("copyButton").disabled,
-        htmlCopyHidden:document.getElementById("htmlCopyButton").hidden
+        uploadHidden:document.getElementById("uploadButton").hidden
       };
       return window.__smokeStats;
     })()`,
@@ -236,17 +237,20 @@ try {
   for (const key of ["title", "slices", "components"]) if (initial[key] !== expected[key]) fail(`${key}: expected ${expected[key]}, got ${initial[key]}`);
   if (initial.imageStat !== expected.images || initial.imageDom !== expected.images) fail(`initial image count mismatch: ${JSON.stringify(initial)}`);
   if (initial.embeddedStat !== expected.embedded || initial.remoteStat !== expected.remote) fail(`initial image persistence mismatch: ${JSON.stringify(initial)}`);
-  if (initial.htmlCopyHidden) fail(`step 1 HTML action is hidden: ${JSON.stringify(initial)}`);
+  if (initial.uploadHidden !== (expected.embedded === 0)) fail(`step 1 image action visibility is wrong: ${JSON.stringify(initial)}`);
   if (expected.embedded && !initial.copyDisabled) fail(`step 2 should be locked before image return: ${JSON.stringify(initial)}`);
   if (!expected.embedded && initial.copyDisabled) fail(`save-ready document copy is disabled: ${JSON.stringify(initial)}`);
 
-  await cdp.send("Runtime.evaluate", { userGesture: true, expression: 'document.getElementById("htmlCopyButton").click()' });
-  const htmlProbe = await trustedCopy(cdp);
-  if (!htmlProbe?.trusted) fail(`expected a trusted full-HTML copy, got ${JSON.stringify(htmlProbe)}`);
-  for (const mime of ["text/html", "text/plain"]) if (!htmlProbe.types.includes(mime)) fail(`full HTML is missing ${mime}`);
-  if (htmlProbe.types.includes(COMPS_MIME) || htmlProbe.types.includes(LABEL_MIME)) fail(`full HTML leaked Xiumi native MIME: ${JSON.stringify(htmlProbe)}`);
-  if (htmlProbe.htmlImages !== expected.images || htmlProbe.htmlLength < 100) fail(`full HTML did not contain the complete article: ${JSON.stringify(htmlProbe)}`);
-  if (htmlProbe.htmlMixedBlocks !== 0 || htmlProbe.htmlTopBlocks < expected.images) fail(`Xiumi-safe HTML blocks are malformed: ${JSON.stringify(htmlProbe)}`);
+  let uploadProbe = null;
+  if (expected.embedded) {
+    await cdp.send("Runtime.evaluate", { userGesture: true, expression: 'document.getElementById("uploadButton").click()' });
+    uploadProbe = await trustedCopy(cdp);
+    if (!uploadProbe?.trusted) fail(`expected a trusted image-sheet copy, got ${JSON.stringify(uploadProbe)}`);
+    for (const mime of ["text/html", "text/plain"]) if (!uploadProbe.types.includes(mime)) fail(`image sheet is missing ${mime}`);
+    if (uploadProbe.types.includes(COMPS_MIME) || uploadProbe.types.includes(LABEL_MIME)) fail(`image sheet leaked Xiumi native MIME: ${JSON.stringify(uploadProbe)}`);
+    if (uploadProbe.htmlImages !== expected.images || uploadProbe.htmlLength < 100) fail(`image sheet did not contain every image: ${JSON.stringify(uploadProbe)}`);
+    if (uploadProbe.htmlMixedBlocks !== 0 || uploadProbe.htmlTopBlocks !== expected.images || uploadProbe.htmlText) fail(`image sheet contains text or malformed blocks: ${JSON.stringify(uploadProbe)}`);
+  }
 
   if (expected.embedded) {
     const pendingSources = Array.from({ length: expected.images }, (_, index) => index < Math.floor(expected.images / 2)
@@ -308,7 +312,7 @@ try {
   for (const key of ["title", "slices", "components"]) if (actual[key] !== expected[key]) fail(`${key}: expected ${expected[key]}, got ${actual[key]}`);
   if (actual.imageStat !== expected.images || actual.embeddedStat !== 0 || actual.remoteStat !== expected.images) fail(`final persistence stats mismatch: ${JSON.stringify(actual)}`);
   if (!actual.status.includes("xiumi-comps 已写入 Chromium")) fail(`unexpected status: ${actual.status}`);
-  console.log(JSON.stringify({ ok: true, url, expected, initial, htmlProbe, finalProbe, actual }, null, 2));
+  console.log(JSON.stringify({ ok: true, url, expected, initial, uploadProbe, finalProbe, actual }, null, 2));
 } finally {
   if (cdp) cdp.close();
   await stop(chrome);

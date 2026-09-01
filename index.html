@@ -18,7 +18,7 @@
 <body>
   <main class="shell">
     <header class="masthead">
-      <div class="brand"><div class="mark">秀</div><div><h1>秀米原生剪切板</h1><p class="subtitle">先用完整 HTML 落稿，再按需切换原生组件。</p></div></div>
+      <div class="brand"><div class="mark">秀</div><div><h1>秀米原生剪切板</h1><p class="subtitle">先把全部图片交给秀米，再生成原生正文。</p></div></div>
       <div class="tag">Chromium · Xiumi Native</div>
     </header>
     <section class="workspace">
@@ -28,9 +28,9 @@
         <div class="actions">
           <button class="btn btn-soft" id="demoButton" type="button">打开演示</button>
           <button class="btn btn-line" id="clearButton" type="button">清空</button>
-          <button class="btn btn-html" id="htmlCopyButton" type="button" disabled hidden>① 复制带格式 HTML</button>
+          <button class="btn btn-html" id="uploadButton" type="button" disabled hidden>① 复制全部图片（无格式）</button>
           <button class="btn btn-soft" id="downloadButton" type="button" disabled hidden>下载保存版 JSON</button>
-          <button class="btn btn-primary" id="copyButton" type="button" disabled>② 复制 xiumi-comps（可选）</button>
+          <button class="btn btn-primary" id="copyButton" type="button" disabled>② 复制 xiumi-comps（生成正文）</button>
         </div>
         <div class="status" id="status">等待载入 JSON。</div>
         <div class="facts" id="facts" hidden>
@@ -40,7 +40,7 @@
           <div class="fact"><b id="remoteCount">0</b><span>永久图片</span></div>
           <div class="fact"><b id="componentCount">0</b><span>可编辑组件</span></div>
         </div>
-        <p class="hint">先点①并在本页按 <kbd>Ctrl</kbd> + <kbd>C</kbd>，到秀米粘贴即可保存。若还要②，复制刚导入的秀米全文，回本页按 <kbd>Ctrl</kbd> + <kbd>V</kbd> 解锁。</p>
+        <p class="hint">①只含图片：粘贴到空白秀米临时稿。上传完成后在秀米“复制全文”，回本页按 <kbd>Ctrl</kbd> + <kbd>V</kbd>，再用②生成真正正文。</p>
       </aside>
       <section class="panel preview-panel">
         <div class="preview-head"><div class="document-title" id="documentTitle">尚未载入稿件</div><div class="scale-note">415px 秀米画布</div></div>
@@ -68,7 +68,7 @@
     const $ = id => document.getElementById(id);
     const nodes = {
       file: $("fileInput"), drop: $("dropZone"), demo: $("demoButton"), clear: $("clearButton"),
-      htmlCopy: $("htmlCopyButton"), download: $("downloadButton"), copy: $("copyButton"),
+      upload: $("uploadButton"), download: $("downloadButton"), copy: $("copyButton"),
       status: $("status"), facts: $("facts"), paper: $("paper"), title: $("documentTitle"), toast: $("toast")
     };
 
@@ -245,19 +245,19 @@
         $("remoteCount").textContent = checked.remoteImageCount;
         $("componentCount").textContent = checked.componentCount;
         nodes.facts.hidden = false;
-        nodes.htmlCopy.hidden = false;
-        nodes.htmlCopy.disabled = false;
+        nodes.upload.hidden = checked.embeddedImageCount === 0;
+        nodes.upload.disabled = checked.embeddedImageCount === 0;
         nodes.copy.disabled = !checked.saveReady;
         nodes.download.hidden = !checked.saveReady || checked.remoteImageCount === 0;
         nodes.download.disabled = !checked.saveReady;
         const note = state.warnings.length ? `\n${[...new Set(state.warnings)].join("\n")}` : "";
         if (checked.embeddedImageCount) {
-          setStatus(`已载入：${sourceLabel}\n先做①：完整排版和 ${checked.embeddedImageCount} 张图片会一起进入秀米，并可直接保存。②暂未解锁。${note}`, "good");
+          setStatus(`已载入：${sourceLabel}\n先做①：只上传 ${checked.imageCount} 张图片，不带任何正文和格式。回传全部永久地址后才能使用②。${note}`, "good");
         } else if (options.localized) {
-          setStatus(`已从秀米稿取得 ${checked.remoteImageCount} 张永久图片。\n②已解锁：复制 xiumi-comps 后，回秀米全选正文并粘贴，即可覆盖第一步的 HTML 版。${note}`, "good");
+          setStatus(`已从秀米临时稿取得 ${checked.remoteImageCount} 张永久图片。\n②已解锁：复制 xiumi-comps 后，在空白正式稿中粘贴即可生成正文。${note}`, "good");
           toast("② xiumi-comps 已解锁");
         } else {
-          setStatus(`已载入：${sourceLabel}\n先做①导入带格式 HTML；②为可选的原生组件覆盖。${note}`, "good");
+          setStatus(`已载入：${sourceLabel}\n图片已是永久地址，可直接使用②生成正文。${note}`, "good");
         }
       } catch (error) { clearDocument(false); setStatus(error.message || String(error), "bad"); }
     }
@@ -278,7 +278,7 @@
     function clearDocument(showMessage = true) {
       state.document = null; state.stats = null; state.warnings = []; state.copyMode = null; state.localization = null; state.sourceLabel = "";
       nodes.paper.replaceChildren(); nodes.paper.className = "paper empty"; nodes.paper.removeAttribute("style");
-      nodes.title.textContent = "尚未载入稿件"; nodes.copy.disabled = true; nodes.htmlCopy.disabled = true; nodes.htmlCopy.hidden = true;
+      nodes.title.textContent = "尚未载入稿件"; nodes.copy.disabled = true; nodes.upload.disabled = true; nodes.upload.hidden = true;
       nodes.download.disabled = true; nodes.download.hidden = true; nodes.facts.hidden = true; nodes.file.value = "";
       if (showMessage) setStatus("已清空，等待载入 JSON。");
     }
@@ -290,42 +290,23 @@
         return { mime: entry.mime, value: JSON.stringify(data) };
       });
     }
-    function fullStyledHTML() {
-      const fragment = document.createElement("div");
-      const textProperties = ["color", "fontSize", "fontFamily", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "textAlign", "textDecoration", "textIndent"];
-      for (const source of nodes.paper.querySelectorAll(".xiumi-text, .xiumi-image")) {
-        let block;
-        if (source.classList.contains("xiumi-image")) {
-          const sourceImage = source.querySelector("img[src]");
-          if (!sourceImage) continue;
-          block = document.createElement("p");
-          block.style.cssText = "margin:0;line-height:0;text-align:center;";
-          const image = sourceImage.cloneNode(true);
-          image.style.display = "inline-block";
-          image.style.verticalAlign = "middle";
-          block.append(image);
-        } else {
-          block = source.cloneNode(true);
-          const computed = getComputedStyle(source);
-          for (const paragraph of block.querySelectorAll("p")) {
-            if (!paragraph.style.margin && !paragraph.style.marginTop && !paragraph.style.marginBottom) paragraph.style.margin = "0";
-            for (const property of textProperties) if (!paragraph.style[property] && computed[property]) paragraph.style[property] = computed[property];
-          }
-        }
-        block.setAttribute("data-xiumi-saveable-block", source.classList.contains("xiumi-image") ? "image" : "text");
-        block.querySelectorAll("*").forEach(element => { element.style.boxSizing = "border-box"; element.removeAttribute("class"); });
-        block.style.boxSizing = "border-box";
-        block.removeAttribute("class");
-        fragment.append(block);
-      }
-      return fragment.innerHTML;
+    function uploadSheet(sources) {
+      return sources.map((src, index) => {
+        const paragraph = document.createElement("p");
+        paragraph.setAttribute("data-xiumi-upload-index", String(index + 1));
+        const image = document.createElement("img");
+        image.src = src;
+        image.alt = "";
+        paragraph.append(image);
+        return paragraph.outerHTML;
+      }).join("");
     }
-    function beginHTMLCopy() {
-      if (!state.document || !state.stats) return;
-      state.copyMode = "full-html";
+    function beginImageUpload() {
+      if (!state.document || !state.stats || !state.stats.imageCount) return;
       const sources = imageSources(state.stats.comps);
-      state.localization = state.stats.embeddedImageCount ? { sources, awaitingReturn: false } : null;
-      setStatus(`① 已准备：完整排版和 ${state.stats.imageCount} 张图片会作为同一份 HTML 写入剪切板。\n现在请在本页真实按 Ctrl+C，然后到秀米粘贴。`, "good");
+      state.copyMode = "upload-sheet";
+      state.localization = { sources, awaitingReturn: false };
+      setStatus(`① 已准备：剪切板中只放 ${sources.length} 张图片，不含标题、文字或正式排版。\n现在请在本页真实按 Ctrl+C，再粘贴到空白秀米临时稿。`, "good");
       toast("下一步：在本页按 Ctrl+C");
       document.body.focus();
     }
@@ -336,24 +317,24 @@
         return;
       }
       try {
-        if (state.copyMode === "full-html") {
-          event.clipboardData.setData("text/html", fullStyledHTML());
-          event.clipboardData.setData("text/plain", state.document.meta.title || "Xiumi document");
+        if (state.copyMode === "upload-sheet") {
+          event.clipboardData.setData("text/html", uploadSheet(state.localization.sources));
+          event.clipboardData.setData("text/plain", "\u200b");
           event.preventDefault();
-          state.copyMode = state.localization ? "awaiting-return" : null;
-          if (state.localization) state.localization.awaitingReturn = true;
-          setStatus(`① 带格式 HTML 已复制。现在到秀米按 Ctrl+V，等图片加载完成后即可保存。\n若还要②：在秀米全选并复制这篇正文，回本页按 Ctrl+V，工具会解锁 xiumi-comps。`, "good");
+          state.copyMode = "awaiting-return";
+          state.localization.awaitingReturn = true;
+          setStatus(`① 的 ${state.localization.sources.length} 张纯图片已复制，不含任何正文。\n粘贴到空白秀米临时稿，等图片上传完全结束；再用秀米“复制全文”，回本页按 Ctrl+V。`, "good");
           toast("① 已复制，去秀米粘贴");
           return;
         }
         if (!state.stats || !state.stats.saveReady) {
-          setStatus("② 尚未解锁。先完成①，再把秀米中已导入的全文复制回来。", "bad");
+          setStatus("② 尚未解锁。先完成①，再把秀米临时图片稿“复制全文”回本页。", "bad");
           return;
         }
         for (const format of materializedFormats()) event.clipboardData.setData(format.mime, format.value);
         event.clipboardData.setData("text/plain", state.document.meta.title || "Xiumi document");
         event.preventDefault();
-        setStatus(`② xiumi-comps 已写入 Chromium 原生剪切板。\n现在回秀米全选正文，再按 Ctrl+V 覆盖 HTML 版。`, "good"); toast("② 已复制，回秀米覆盖");
+        setStatus(`② xiumi-comps 已写入 Chromium 原生剪切板。\n现在到空白秀米正式稿按 Ctrl+V，生成完整排版正文。`, "good"); toast("② 已复制，去空白正式稿粘贴");
       } catch (error) { setStatus(`复制失败：${error.message}`, "bad"); }
     }
     function onPaste(event) {
@@ -364,11 +345,11 @@
         const remoteCount = returned.filter(entry => entry.kind === "remote").length;
         const embeddedCount = returned.filter(entry => entry.kind === "embedded").length;
         if (returned.length === expected.length && embeddedCount) {
-          setStatus(`已收到完整正文，但秀米仍在串行上传图片：${remoteCount}/${expected.length} 张已取得永久地址，还有 ${embeddedCount} 张未完成。\n不要重做①；回秀米等待粘贴/上传提示完全结束，再全选复制并回本页按 Ctrl+V。`, "bad");
+          setStatus(`已收到完整图片单，但秀米仍在串行上传图片：${remoteCount}/${expected.length} 张已取得永久地址，还有 ${embeddedCount} 张未完成。\n不要重做①；回秀米等待上传提示完全结束，再用秀米“复制全文”并回本页按 Ctrl+V。`, "bad");
           return;
         }
         if (returned.length !== expected.length) {
-          setStatus(`这次只收到正文中的 ${returned.length}/${expected.length} 张图片（其中 ${remoteCount} 张已有永久地址）。\n请回秀米确认全选了整篇正文；若仍在上传，先等待上传提示完全结束，再重新全选复制。`, "bad");
+          setStatus(`这次只收到临时稿中的 ${returned.length}/${expected.length} 张图片（其中 ${remoteCount} 张已有永久地址）。\n请回秀米等待全部上传结束，再使用秀米的“复制全文”，不要手动只选中可见区域。`, "bad");
           return;
         }
         if (remoteCount !== expected.length) {
@@ -400,9 +381,9 @@
       toast("保存版 JSON 已下载");
     }
     async function copyFromButton() {
-      if (!state.document || !state.stats || !state.stats.saveReady) return setStatus("② 尚未解锁。先完成①，再把秀米全文复制回本页。", "bad");
+      if (!state.document || !state.stats || !state.stats.saveReady) return setStatus("② 尚未解锁。先完成①，再把秀米临时图片稿“复制全文”回本页。", "bad");
       if (!state.copyEndpoint) {
-        setStatus("② 已准备：现在请在本页按 Ctrl+C。回到秀米后先全选正文，再按 Ctrl+V 覆盖 HTML 版。", "good");
+        setStatus("② 已准备：现在请在本页按 Ctrl+C，再到空白秀米正式稿按 Ctrl+V。", "good");
         toast("请按 Ctrl+C 完成原生复制");
         document.body.focus();
         return;
@@ -415,7 +396,7 @@
         });
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
-        setStatus(`② xiumi-comps 已写入剪切板（${result.bytes} bytes）。\n现在回秀米全选正文，再按 Ctrl+V 覆盖 HTML 版。`, "good");
+        setStatus(`② xiumi-comps 已写入剪切板（${result.bytes} bytes）。\n现在到空白秀米正式稿按 Ctrl+V，生成完整排版正文。`, "good");
         toast("复制成功，去秀米粘贴");
       } catch (error) {
         setStatus(`一键桥接不可用：${error.message}\n请在本页按 Ctrl+C 完成原生复制。`, "bad");
@@ -429,7 +410,7 @@
     nodes.drop.addEventListener("drop", event => { event.preventDefault(); nodes.drop.classList.remove("drag"); loadFile(event.dataTransfer.files[0]); });
     nodes.demo.addEventListener("click", () => loadURL("examples/demo.xiumi.json").catch(error => setStatus(error.message, "bad")));
     nodes.clear.addEventListener("click", () => clearDocument());
-    nodes.htmlCopy.addEventListener("click", beginHTMLCopy);
+    nodes.upload.addEventListener("click", beginImageUpload);
     nodes.download.addEventListener("click", downloadDocument);
     nodes.copy.addEventListener("click", copyFromButton);
     document.addEventListener("copy", onCopy);
