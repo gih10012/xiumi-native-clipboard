@@ -298,7 +298,11 @@
         image.src = src;
         image.alt = "";
         paragraph.append(image);
-        return paragraph.outerHTML;
+        if (index === sources.length - 1) return paragraph.outerHTML;
+        const spacer = document.createElement("p");
+        spacer.setAttribute("data-xiumi-skip-spacer", String(index + 1));
+        spacer.append(document.createElement("br"));
+        return paragraph.outerHTML + spacer.outerHTML;
       }).join("");
     }
     function beginImageUpload() {
@@ -306,7 +310,7 @@
       const sources = imageSources(state.stats.comps);
       state.copyMode = "upload-sheet";
       state.localization = { sources, awaitingReturn: false };
-      setStatus(`① 已准备：剪切板中只放 ${sources.length} 张图片，不含标题、文字或正式排版。\n现在请在本页真实按 Ctrl+C，再粘贴到空白秀米临时稿。`, "good");
+      setStatus(`① 已准备：剪切板中只放 ${sources.length} 张图片；图片之间加入了防止秀米隔张漏图的空占位，不含标题或正文。\n现在请在本页真实按 Ctrl+C，再粘贴到空白秀米临时稿。`, "good");
       toast("下一步：在本页按 Ctrl+C");
       document.body.focus();
     }

@@ -141,6 +141,7 @@ async function trustedCopy(cdp) {
           htmlImages:template.content.querySelectorAll("img[src]").length,
           htmlTopBlocks:topBlocks.length,
           htmlMixedBlocks:topBlocks.filter(block=>block.querySelector("img[src]")&&block.textContent.trim()).length,
+          htmlSpacers:topBlocks.filter(block=>block.hasAttribute("data-xiumi-skip-spacer")&&block.querySelector("br")&&!block.querySelector("img[src]")).length,
           htmlText:template.content.textContent.replace(/\u200b/g,"").trim()
         };
       },{once:true});
@@ -249,7 +250,7 @@ try {
     for (const mime of ["text/html", "text/plain"]) if (!uploadProbe.types.includes(mime)) fail(`image sheet is missing ${mime}`);
     if (uploadProbe.types.includes(COMPS_MIME) || uploadProbe.types.includes(LABEL_MIME)) fail(`image sheet leaked Xiumi native MIME: ${JSON.stringify(uploadProbe)}`);
     if (uploadProbe.htmlImages !== expected.images || uploadProbe.htmlLength < 100) fail(`image sheet did not contain every image: ${JSON.stringify(uploadProbe)}`);
-    if (uploadProbe.htmlMixedBlocks !== 0 || uploadProbe.htmlTopBlocks !== expected.images || uploadProbe.htmlText) fail(`image sheet contains text or malformed blocks: ${JSON.stringify(uploadProbe)}`);
+    if (uploadProbe.htmlMixedBlocks !== 0 || uploadProbe.htmlTopBlocks !== expected.images * 2 - 1 || uploadProbe.htmlSpacers !== expected.images - 1 || uploadProbe.htmlText) fail(`image sheet contains text or malformed anti-skip blocks: ${JSON.stringify(uploadProbe)}`);
   }
 
   if (expected.embedded) {

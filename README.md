@@ -56,7 +56,7 @@ ln -s "$(pwd)/skills/xiumi-native-clipboard" ~/.codex/skills/xiumi-native-clipbo
 
 ## 兼容性
 
-①只写入 `text/html` 与 `text/plain`：HTML 是由独立顶层图片块构成的无文字上传单，不包含正式稿的任何文字或布局。秀米因此只负责逐张接收 Base64 图片。②使用 Chromium DataTransfer 自定义格式；其中的图片地址已从临时图片稿回传为秀米永久地址，因此完整原生正文能够保存。本地服务的按钮为②提供等价的系统剪切板桥接。目标浏览器为桌面版 Edge/Chrome；Firefox 和 Safari 不在兼容范围内。
+①只写入 `text/html` 与 `text/plain`：HTML 是无文字上传单，不包含正式稿的任何文字或布局。实测秀米会在一串相邻顶层图片中稳定漏掉偶数序号，因此工具在每两张真实图片之间插入一个空 `<p><br></p>` 占位，让秀米跳过空位而保留全部图片。②使用 Chromium DataTransfer 自定义格式；其中的图片地址已从临时图片稿回传为秀米永久地址，因此完整原生正文能够保存。本地服务的按钮为②提供等价的系统剪切板桥接。目标浏览器为桌面版 Edge/Chrome；Firefox 和 Safari 不在兼容范围内。
 
 ## 开发验证
 
