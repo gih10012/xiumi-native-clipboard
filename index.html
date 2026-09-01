@@ -168,20 +168,21 @@
       });
       return output;
     }
-    function remoteSources(value) {
+    function imageEntries(value) {
       const output = [];
       walk(value, node => {
-        const src = node.type === "image" ? normalizeRemoteURL(node.src) : null;
-        if (src) output.push(src);
+        if (node.type !== "image" || typeof node.src !== "string") return;
+        const remote = normalizeRemoteURL(node.src);
+        output.push({ src: remote || node.src, kind: remote ? "remote" : isEmbeddedImage(node.src) ? "embedded" : "other" });
       });
       return output;
     }
-    function remoteSourcesFromClipboard(clipboardData) {
+    function imageEntriesFromClipboard(clipboardData) {
       const native = clipboardData.getData(COMPS_MIME);
       if (native) {
         try {
-          const sources = remoteSources(JSON.parse(native));
-          if (sources.length) return sources;
+          const entries = imageEntries(JSON.parse(native));
+          if (entries.length) return entries;
         } catch (_) {}
       }
       const html = clipboardData.getData("text/html");
@@ -190,8 +191,9 @@
       template.innerHTML = html;
       const output = [];
       for (const image of template.content.querySelectorAll("img[src]")) {
-        const src = normalizeRemoteURL(image.getAttribute("src"));
-        if (src) output.push(src);
+        const original = image.getAttribute("src") || "";
+        const remote = normalizeRemoteURL(original);
+        output.push({ src: remote || original, kind: remote ? "remote" : isEmbeddedImage(original) ? "embedded" : "other" });
       }
       return output;
     }
@@ -289,20 +291,34 @@
       });
     }
     function fullStyledHTML() {
-      const root = document.createElement("section");
-      root.setAttribute("data-xiumi-saveable-paste", "1");
-      root.style.cssText = "box-sizing:border-box;width:100%;max-width:100%;margin:0 auto;";
-      for (const child of nodes.paper.children) root.append(child.cloneNode(true));
-      root.querySelectorAll("*").forEach(element => {
-        element.style.boxSizing = "border-box";
-        if (element.tagName === "P" && !element.style.margin && !element.style.marginTop && !element.style.marginBottom) element.style.margin = "0";
-        if (element.tagName === "IMG") {
-          element.style.display = "inline-block";
-          element.style.verticalAlign = "middle";
+      const fragment = document.createElement("div");
+      const textProperties = ["color", "fontSize", "fontFamily", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "textAlign", "textDecoration", "textIndent"];
+      for (const source of nodes.paper.querySelectorAll(".xiumi-text, .xiumi-image")) {
+        let block;
+        if (source.classList.contains("xiumi-image")) {
+          const sourceImage = source.querySelector("img[src]");
+          if (!sourceImage) continue;
+          block = document.createElement("p");
+          block.style.cssText = "margin:0;line-height:0;text-align:center;";
+          const image = sourceImage.cloneNode(true);
+          image.style.display = "inline-block";
+          image.style.verticalAlign = "middle";
+          block.append(image);
+        } else {
+          block = source.cloneNode(true);
+          const computed = getComputedStyle(source);
+          for (const paragraph of block.querySelectorAll("p")) {
+            if (!paragraph.style.margin && !paragraph.style.marginTop && !paragraph.style.marginBottom) paragraph.style.margin = "0";
+            for (const property of textProperties) if (!paragraph.style[property] && computed[property]) paragraph.style[property] = computed[property];
+          }
         }
-        element.removeAttribute("class");
-      });
-      return root.outerHTML;
+        block.setAttribute("data-xiumi-saveable-block", source.classList.contains("xiumi-image") ? "image" : "text");
+        block.querySelectorAll("*").forEach(element => { element.style.boxSizing = "border-box"; element.removeAttribute("class"); });
+        block.style.boxSizing = "border-box";
+        block.removeAttribute("class");
+        fragment.append(block);
+      }
+      return fragment.innerHTML;
     }
     function beginHTMLCopy() {
       if (!state.document || !state.stats) return;
@@ -343,16 +359,26 @@
     function onPaste(event) {
       if (!state.document || !state.localization || !state.localization.awaitingReturn || !event.clipboardData) return;
       try {
-        const remoteSources = remoteSourcesFromClipboard(event.clipboardData);
+        const returned = imageEntriesFromClipboard(event.clipboardData);
         const expected = state.localization.sources;
-        if (remoteSources.length !== expected.length) {
-          setStatus(`没有收到完整的秀米正文：需要 ${expected.length} 张永久图片，实际识别到 ${remoteSources.length} 张。\n请等第一步的图片全部加载完成，在秀米全选正文并复制，再回本页按 Ctrl+V。`, "bad");
+        const remoteCount = returned.filter(entry => entry.kind === "remote").length;
+        const embeddedCount = returned.filter(entry => entry.kind === "embedded").length;
+        if (returned.length === expected.length && embeddedCount) {
+          setStatus(`已收到完整正文，但秀米仍在串行上传图片：${remoteCount}/${expected.length} 张已取得永久地址，还有 ${embeddedCount} 张未完成。\n不要重做①；回秀米等待粘贴/上传提示完全结束，再全选复制并回本页按 Ctrl+V。`, "bad");
+          return;
+        }
+        if (returned.length !== expected.length) {
+          setStatus(`这次只收到正文中的 ${returned.length}/${expected.length} 张图片（其中 ${remoteCount} 张已有永久地址）。\n请回秀米确认全选了整篇正文；若仍在上传，先等待上传提示完全结束，再重新全选复制。`, "bad");
+          return;
+        }
+        if (remoteCount !== expected.length) {
+          setStatus(`已收到 ${returned.length} 张图片，但其中有 ${returned.length - remoteCount} 张不是秀米永久地址，②暂不解锁。请等待上传完成后重试。`, "bad");
           return;
         }
         event.preventDefault();
         const localized = clone(state.document);
         const replacements = new Map();
-        expected.forEach((src, index) => { if (!replacements.has(src)) replacements.set(src, remoteSources[index]); });
+        expected.forEach((src, index) => { if (!replacements.has(src)) replacements.set(src, returned[index].src); });
         const format = localized.clipboard.formats.find(entry => entry.mime === COMPS_MIME);
         walk(format.data.slices, node => {
           if (node.type === "image" && replacements.has(node.src)) node.src = replacements.get(node.src);

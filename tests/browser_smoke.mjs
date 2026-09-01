@@ -133,7 +133,15 @@ async function trustedCopy(cdp) {
         const html=event.clipboardData.getData("text/html");
         const template=document.createElement("template");
         template.innerHTML=html;
-        window.__copyProbe={trusted:event.isTrusted,types:[...event.clipboardData.types],htmlLength:html.length,htmlImages:template.content.querySelectorAll("img[src]").length};
+        const topBlocks=[...template.content.children];
+        window.__copyProbe={
+          trusted:event.isTrusted,
+          types:[...event.clipboardData.types],
+          htmlLength:html.length,
+          htmlImages:template.content.querySelectorAll("img[src]").length,
+          htmlTopBlocks:topBlocks.length,
+          htmlMixedBlocks:topBlocks.filter(block=>block.querySelector("img[src]")&&block.textContent.trim()).length
+        };
       },{once:true});
       document.body.tabIndex=-1;
       document.body.focus();
@@ -238,8 +246,26 @@ try {
   for (const mime of ["text/html", "text/plain"]) if (!htmlProbe.types.includes(mime)) fail(`full HTML is missing ${mime}`);
   if (htmlProbe.types.includes(COMPS_MIME) || htmlProbe.types.includes(LABEL_MIME)) fail(`full HTML leaked Xiumi native MIME: ${JSON.stringify(htmlProbe)}`);
   if (htmlProbe.htmlImages !== expected.images || htmlProbe.htmlLength < 100) fail(`full HTML did not contain the complete article: ${JSON.stringify(htmlProbe)}`);
+  if (htmlProbe.htmlMixedBlocks !== 0 || htmlProbe.htmlTopBlocks < expected.images) fail(`Xiumi-safe HTML blocks are malformed: ${JSON.stringify(htmlProbe)}`);
 
   if (expected.embedded) {
+    const pendingSources = Array.from({ length: expected.images }, (_, index) => index < Math.floor(expected.images / 2)
+      ? `https://assets.example.test/xiumi-pending-${index + 1}.png`
+      : "data:image/png;base64,aGVsbG8=");
+    const pendingResult = await cdp.send("Runtime.evaluate", {
+      userGesture: true,
+      returnByValue: true,
+      expression: `(()=>{
+        const sources=${JSON.stringify(pendingSources)};
+        const transfer=new DataTransfer();
+        transfer.setData(${JSON.stringify(COMPS_MIME)},JSON.stringify({slices:sources.map(src=>({img1:{type:"image",src}}))}));
+        document.dispatchEvent(new ClipboardEvent("paste",{clipboardData:transfer,bubbles:true,cancelable:true}));
+        return {status:document.getElementById("status").textContent,copyDisabled:document.getElementById("copyButton").disabled};
+      })()`,
+    });
+    const pending = pendingResult.result.value;
+    if (!pending.copyDisabled || !pending.status.includes("仍在串行上传图片")) fail(`incomplete image upload was not diagnosed: ${JSON.stringify(pending)}`);
+
     const remoteSources = Array.from({ length: expected.images }, (_, index) => `https://assets.example.test/xiumi-localized-${index + 1}.png`);
     const pasteResult = await cdp.send("Runtime.evaluate", {
       userGesture: true,

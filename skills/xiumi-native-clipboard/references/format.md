@@ -51,7 +51,7 @@ A Base64 `data:image/...;base64,...` source is draft transport, not final storag
 
 A save-ready image source for native components is a persistent HTTP(S) URL returned after Xiumi has accepted the image into the current account. Use the preview tool's HTML-first workflow:
 
-1. Copy the complete styled article as ordinary `text/html` plus `text/plain`, without Xiumi custom MIME.
+1. Copy all content as ordinary `text/html` plus `text/plain`, without Xiumi custom MIME. Emit each top-level block as text-only or image-only; a top-level node with both text and nested images makes Xiumi choose its text conversion branch and drop those images.
 2. Paste it into Xiumi. Xiumi uploads the Base64 images, and this HTML version is already a valid final result.
 3. Only when native replacement is wanted, select and copy the imported Xiumi body and paste it back into the tool.
 4. The tool replaces matching data URIs in the original native components with the returned permanent URLs.
